@@ -1,0 +1,23 @@
+name: integration
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, xml, curl, json
+          tools: composer:v2
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Integration tests (read-only)
+        env:
+          VOICETEL_USERNAME: ${{ secrets.VOICETEL_USERNAME }}
+          VOICETEL_PASSWORD: ${{ secrets.VOICETEL_PASSWORD }}
+        run: vendor/bin/phpunit --testsuite integration --no-coverage
