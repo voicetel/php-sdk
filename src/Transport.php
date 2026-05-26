@@ -193,6 +193,14 @@ final class Transport
         $status = $resp->getStatusCode();
         $raw = (string) $resp->getBody();
 
+        $encoding = $resp->getHeaderLine('Content-Encoding');
+        if (stripos($encoding, 'gzip') !== false && $raw !== '') {
+            $decoded = gzdecode($raw);
+            if ($decoded !== false) {
+                $raw = $decoded;
+            }
+        }
+
         if ($status >= 200 && $status < 300) {
             if ($expectNoBody || $raw === '' || $status === 204) {
                 return null;
