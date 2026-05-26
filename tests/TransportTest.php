@@ -23,6 +23,23 @@ final class TransportTest extends TestCase
         $out = $c->account->get();
         $this->assertSame('abc', $out['username']);
         $this->assertSame(12.5, $out['cash']);
+        $this->assertSame('gzip', $this->history[0]['request']->getHeaderLine('Accept-Encoding'));
+    }
+
+    public function testDecodesGzipResponse(): void
+    {
+        $payload = json_encode([
+            'status' => 'success',
+            'data' => ['username' => 'gzip-user'],
+        ], JSON_THROW_ON_ERROR);
+        $c = $this->makeClient([
+            new Response(200, [
+                'Content-Type' => 'application/json',
+                'Content-Encoding' => 'gzip',
+            ], gzencode($payload)),
+        ]);
+        $out = $c->account->get();
+        $this->assertSame('gzip-user', $out['username']);
     }
 
     public function testRawJsonWithoutEnvelopeIsPassedThrough(): void

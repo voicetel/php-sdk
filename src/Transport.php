@@ -128,6 +128,7 @@ final class Transport
         $headers = [
             'User-Agent' => $this->userAgent,
             'Accept' => 'application/json',
+            'Accept-Encoding' => 'gzip',
         ];
         $payload = null;
         if ($body !== null) {
@@ -140,6 +141,9 @@ final class Transport
         }
         if ($requireAuth) {
             $headers['Authorization'] = 'Bearer ' . $this->apiKey;
+        }
+        if (in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
+            $headers['Idempotency-Key'] = bin2hex(random_bytes(16));
         }
 
         $request = new Request($method, $url, $headers, $payload);
