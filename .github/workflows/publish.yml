@@ -1,0 +1,55 @@
+name: Notify Packagist
+
+# Tells packagist.org to re-pull this repo on every v* tag push so
+# the new version appears at https://packagist.org/packages/voicetel/sdk
+# without waiting for Packagist's slow background polling cycle.
+#
+# Required one-time setup outside this workflow:
+#   1. Sign in at packagist.org with the voicetel GitHub identity.
+#   2. Submit voicetel/php-sdk if it's not already listed — Packagist
+#      auto-creates the package from composer.json's `name`
+#      ("voicetel/sdk").
+#   3. Profile → Show API Token → copy the token.
+#   4. On this repo: add secrets PACKAGIST_USERNAME (your packagist.org
+#      username) and PACKAGIST_API_TOKEN (the token from step 3).
+#
+# Without these secrets the curl call fails (Packagist returns 401)
+# but the workflow itself exits non-zero — the tag is still on
+# GitHub, you just have to re-run this workflow via workflow_dispatch
+# after the secrets are added.
+#
+# Note: this workflow doesn't *publish* anything — Packagist pulls
+# the tag directly from this GitHub repo on demand. No build, no
+# upload artifact.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Notify Packagist
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: POST /api/update-package
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_API_TOKEN: ${{ secrets.PACKAGIST_API_TOKEN }}
+        run: |
+          set -e
+          if [ -z "${PACKAGIST_USERNAME:-}" ] || [ -z "${PACKAGIST_API_TOKEN:-}" ]; then
+            echo "::error::PACKAGIST_USERNAME / PACKAGIST_API_TOKEN secrets not set; see workflow file header for setup steps."
+            exit 1
+          fi
+          response=$(curl -sS -o /tmp/packagist.json -w '%{http_code}' \
+            -XPOST -H 'Content-Type: application/json' \
+            "https://packagist.org/api/update-package?username=${PACKAGIST_USERNAME}&apiToken=${PACKAGIST_API_TOKEN}" \
+            -d '{"repository":{"url":"https://github.com/voicetel/php-sdk"}}')
+          echo "HTTP ${response}"
+          cat /tmp/packagist.json
+          [ "${response}" = "202" ] || exit 1
