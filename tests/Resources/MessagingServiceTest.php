@@ -46,6 +46,36 @@ final class MessagingServiceTest extends TestCase
         $this->assertSame([], $r['campaigns']);
     }
 
+    public function testCampaignStatusIncludesDca(): void
+    {
+        $c = $this->makeClient([$this->envelope(['campaigns' => [
+            [
+                'id' => 'CAMP002',
+                'status' => 'CAMPAIGN_DCA_REJECTED',
+                'numbers' => ['2015550123'],
+                'dca' => [
+                    'electionComplete' => true,
+                    'electedCarriers' => ['AT&T', 'T-Mobile', 'Verizon Wireless'],
+                    'carriers' => [
+                        [
+                            'carrier' => 'T-Mobile',
+                            'status' => 'REJECTED',
+                            'detail' => 'Campaign rejected',
+                            'updatedAt' => '2026-01-02T03:04:05Z',
+                        ],
+                    ],
+                ],
+            ],
+            ['id' => 'NOPE', 'status' => 'CAMPAIGN_INVALID_ID', 'numbers' => [], 'dca' => null],
+        ]])]);
+        $r = $c->messaging->campaignStatus();
+        $this->assertSame('CAMPAIGN_DCA_REJECTED', $r['campaigns'][0]['status']);
+        $this->assertTrue($r['campaigns'][0]['dca']['electionComplete']);
+        $this->assertSame('T-Mobile', $r['campaigns'][0]['dca']['carriers'][0]['carrier']);
+        $this->assertSame('REJECTED', $r['campaigns'][0]['dca']['carriers'][0]['status']);
+        $this->assertNull($r['campaigns'][1]['dca']);
+    }
+
     public function testCreateCampaign(): void
     {
         $c = $this->makeClient([$this->envelope(['result' => ['statusCode' => '200', 'status' => 'Success']])]);

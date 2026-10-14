@@ -2,7 +2,7 @@
 
 The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/api/v2.2/) — provision numbers, place orders, validate e911, send messages, and manage your account, with modern PHP 8.1+ ergonomics and battle-tested Guzzle transport.
 
-![Version](https://img.shields.io/badge/version-2.2.10-blue)
+![Version](https://img.shields.io/badge/version-2.2.14-blue)
 ![PHP](https://img.shields.io/badge/php-%E2%89%A58.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
@@ -51,7 +51,7 @@ The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/ap
 - **Authentication** — switch between Digest, IP-only, or hybrid modes; rotate passwords.
 
 ### 🧪 Battle-Tested
-- **101 unit tests** at **94%+ line coverage** with PHPUnit 10.
+- **106 unit tests** at **94%+ line coverage** with PHPUnit 10.
 - **Mocked Guzzle** via `GuzzleHttp\Handler\MockHandler` — every method and every error path exercised, no network in CI.
 - **Read-only integration scaffolding** gated by `VOICETEL_USERNAME` / `VOICETEL_PASSWORD` env vars.
 

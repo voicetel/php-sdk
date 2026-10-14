@@ -222,6 +222,19 @@ final class NumbersService
     /**
      * GET /v2.2/numbers/{number}/messaging — messaging state for one TN.
      *
+     * Response data shape (v2.2.11+):
+     *  - number (string)
+     *  - onAccount (bool|null) — present and false when the TN is not on the account
+     *  - enabled (bool)
+     *  - carrier (int)
+     *  - routeIn (int) — numbers_sms row id for inbound; 0 = none
+     *  - resource (string)
+     *  - network ("A"|"B"|"C"|null) — messaging path the number is currently on
+     *  - campaign (array|null) — bound campaign with CSP-side status
+     *  - pending (array|null) — async path-C enablement job in progress
+     *    {campaignId, state, message, createdAt, updatedAt}; state is one of
+     *    "queued", "hosting", "assigning", "routing", "done", "failed"
+     *
      * @return array<string, mixed>
      */
     public function getMessaging(string $number): array
@@ -234,7 +247,8 @@ final class NumbersService
     /**
      * PATCH /v2.2/numbers/{number}/messaging — update inbound/outbound routing.
      *
-     * At least one of routeIn / routeOut must be set.
+     * At least one of routeIn / routeOut must be set. routeOut is the
+     * outbound carrier id.
      *
      * @param array<string, mixed> $body
      * @return array<string, mixed>
@@ -248,6 +262,39 @@ final class NumbersService
 
     /**
      * PUT /v2.2/numbers/{number}/messaging-campaign — bind a 10DLC campaign to a TN.
+     *
+     * The campaign must be available to the account and ACTIVE; the number is
+     * enabled on the messaging path the campaign lives on. Idempotent: a number
+     * already bound to the campaign reports status "already".
+     *
+     * Response data shape (v2.2.11+):
+     *  - number (string)
+     *  - campaignId (string)
+     *  - status ("enabled"|"already"|"pending") — enabled = bound now (path B);
+     *    already = the number was already bound to this campaign (records
+     *    reconciled, no new order); pending = accepted and being provisioned
+     *    (path C) — poll getMessaging() (pending) until state is done or failed
+     *  - alreadyAssigned (bool) — true when the number was already bound to
+     *    this campaign on the target messaging path
+     *  - orderId (string|int|null) — network order id created for a path-B
+     *    assignment; null for path C (see job), idempotent no-ops, and
+     *    assignments confirmed without a new order
+     *  - message (string|null) — human-readable note for a pending enablement
+     *  - warning (string|null) — non-fatal condition detected during the
+     *    assignment (for example a stale registration on the other messaging
+     *    path whose removal has been requested)
+     *  - job (array|null) — async path-C enablement job
+     *    {campaignId, state, message, createdAt, updatedAt}
+     *  - network ("B"|"C"|null) — messaging path the campaign resolves to
+     *    (from the CSP sharing record); path B is assigned synchronously,
+     *    path C is provisioned asynchronously (status "pending")
+     *  - previousNetwork ("A"|"B"|null) — path the number was bound to before
+     *    this call; null if there was no prior binding
+     *  - previousNetworkCleared (bool)
+     *  - carrier (int) — outbound carrier id the number routes through once
+     *    enabled (19 = path B, 1 = path C); a pending path-C enablement keeps
+     *    its current routing until provisioning completes
+     *  - upstreamCnpId (string|null) — CAMP003 = path B, BANDW = path C
      *
      * @param array<string, mixed> $body  required: campaignId (7-char alphanumeric upper)
      * @return array<string, mixed>
@@ -298,6 +345,16 @@ final class NumbersService
 
     /**
      * PATCH /v2.2/numbers/{number}/port-out-pin — set the port-out PIN for a TN.
+     *
+     * Idempotent: a PIN is locked for 30 days once set, so a number that
+     * already has one returns it unchanged with changed=false.
+     *
+     * Response data shape:
+     *  - number (string) — ten-digit telephone number whose PIN is reported
+     *  - portOutPin (string) — the port-out PIN now on file for this number
+     *    (the value just set, or the existing value if already locked)
+     *  - changed (bool) — true if this request set the PIN; false if the
+     *    number already had one
      *
      * @param array<string, mixed> $body  required: pin (4-digit numeric)
      * @return array<string, mixed>

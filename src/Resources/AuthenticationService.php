@@ -9,14 +9,14 @@ use VoiceTel\Sdk\Transport;
 /**
  * AuthenticationService manages SIP/HTTP auth mode + password.
  *
- * `authType`: 0 = Digest, 1 = IP Auth, 2 = Digest OR IP, 3 = Digest AND IP.
+ * `authType`: 0 = Digest, 1 = Lax (Digest | IP), 2 = IP, 3 = Strict (Digest + IP).
  */
 final class AuthenticationService
 {
     public const AUTH_TYPE_DIGEST = 0;
-    public const AUTH_TYPE_IP_AUTH = 1;
-    public const AUTH_TYPE_DIGEST_OR_IP = 2;
-    public const AUTH_TYPE_DIGEST_AND_IP = 3;
+    public const AUTH_TYPE_LAX = 1;
+    public const AUTH_TYPE_IP = 2;
+    public const AUTH_TYPE_STRICT = 3;
 
     public function __construct(private readonly Transport $t)
     {

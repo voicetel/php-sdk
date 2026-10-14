@@ -73,6 +73,26 @@ final class MessagingService
     /**
      * GET /v2.2/messaging/campaigns — current 10DLC campaign statuses.
      *
+     * Each item in `campaigns` has the shape (v2.2.14+):
+     *  - id (string)
+     *  - status (string) — CAMPAIGN_DCA_COMPLETE (ready: carrier review
+     *    finished, numbers assigned), CAMPAIGN_DCA_COMPLETE_NO_NUMBERS_ASSIGNED,
+     *    CAMPAIGN_PENDING_DCA (active at the campaign registry, but carrier
+     *    (DCA) review is not finished yet; numbers cannot be enabled until it
+     *    is), CAMPAIGN_DCA_REJECTED (a carrier's DCA rejected or suspended the
+     *    campaign; see dca.carriers), CAMPAIGN_<registry status>, or
+     *    CAMPAIGN_INVALID_ID
+     *  - numbers (string[])
+     *  - dca (array|null) — carrier (DCA) review progress; null for
+     *    CAMPAIGN_INVALID_ID:
+     *    - electionComplete (bool) — every carrier has a DCA assigned to
+     *      review the campaign
+     *    - electedCarriers (string[]|null) — carriers with a DCA assigned so
+     *      far (null when unavailable)
+     *    - carriers (array[]) — each carrier DCA decision received, latest
+     *      per carrier: {carrier, status ("ACTIVE"|"REJECTED"|"SUSPENDED"|
+     *      "UNSUSPENDED"|"TERMINATED"), detail, updatedAt}
+     *
      * @return array<string, mixed>
      */
     public function campaignStatus(): array
@@ -84,6 +104,10 @@ final class MessagingService
 
     /**
      * POST /v2.2/messaging/campaigns — register a 10DLC campaign.
+     *
+     * Body is passed through to the campaign registration service.
+     * campaignClassName (from the campaign registry) and campaignStartDate
+     * (today) are auto-populated if omitted.
      *
      * @param array<string, mixed> $body
      * @return array<string, mixed>

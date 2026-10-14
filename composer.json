@@ -1,8 +1,8 @@
 {
     "name": "voicetel/sdk",
-    "description": "Official PHP SDK for the VoiceTel REST API (v2.2.10).",
+    "description": "Official PHP SDK for the VoiceTel REST API (v2.2.14).",
     "type": "library",
-    "version": "2.2.10",
+    "version": "2.2.14",
     "keywords": ["voicetel", "sdk", "voip", "telephony", "sms", "mms", "did", "e911", "10dlc"],
     "homepage": "https://voicetel.com",
     "license": "MIT",

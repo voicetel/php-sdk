@@ -21,7 +21,7 @@ final class AuthenticationServiceTest extends TestCase
     public function testUpdate(): void
     {
         $c = $this->makeClient([$this->envelope(['updated' => [['field' => 'authType', 'value' => 1]]])]);
-        $c->authentication->update(['authType' => AuthenticationService::AUTH_TYPE_IP_AUTH]);
+        $c->authentication->update(['authType' => AuthenticationService::AUTH_TYPE_LAX]);
         $this->assertSame('PUT', $this->lastRequest()->getMethod());
         $sent = json_decode((string) $this->lastRequest()->getBody(), true);
         $this->assertSame(1, $sent['authType']);
@@ -30,8 +30,8 @@ final class AuthenticationServiceTest extends TestCase
     public function testAuthTypeConstants(): void
     {
         $this->assertSame(0, AuthenticationService::AUTH_TYPE_DIGEST);
-        $this->assertSame(1, AuthenticationService::AUTH_TYPE_IP_AUTH);
-        $this->assertSame(2, AuthenticationService::AUTH_TYPE_DIGEST_OR_IP);
-        $this->assertSame(3, AuthenticationService::AUTH_TYPE_DIGEST_AND_IP);
+        $this->assertSame(1, AuthenticationService::AUTH_TYPE_LAX);
+        $this->assertSame(2, AuthenticationService::AUTH_TYPE_IP);
+        $this->assertSame(3, AuthenticationService::AUTH_TYPE_STRICT);
     }
 }

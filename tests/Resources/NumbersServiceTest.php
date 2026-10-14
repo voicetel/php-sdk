@@ -145,6 +145,30 @@ final class NumbersServiceTest extends TestCase
         $this->assertTrue($r['enabled']);
     }
 
+    public function testGetMessagingPendingPathCEnablement(): void
+    {
+        $c = $this->makeClient([$this->envelope([
+            'number' => self::TN,
+            'enabled' => false,
+            'carrier' => 0,
+            'routeIn' => 0,
+            'resource' => '',
+            'network' => 'C',
+            'campaign' => null,
+            'pending' => [
+                'campaignId' => 'CAMP002',
+                'state' => 'assigning',
+                'message' => 'Waiting for carrier assignment',
+                'createdAt' => '2026-01-02T03:04:05Z',
+                'updatedAt' => '2026-01-02T03:05:06Z',
+            ],
+        ])]);
+        $r = $c->numbers->getMessaging(self::TN);
+        $this->assertSame('C', $r['network']);
+        $this->assertSame('assigning', $r['pending']['state']);
+        $this->assertSame('CAMP002', $r['pending']['campaignId']);
+    }
+
     public function testPatchMessaging(): void
     {
         $c = $this->makeClient([$this->envelope(['number' => self::TN, 'updated' => ['routeIn']])]);
@@ -154,9 +178,86 @@ final class NumbersServiceTest extends TestCase
 
     public function testAssignCampaign(): void
     {
-        $c = $this->makeClient([$this->envelope(['number' => self::TN, 'campaignId' => 'CXXXXXX', 'carrier' => 17])]);
+        $c = $this->makeClient([$this->envelope([
+            'number' => self::TN,
+            'campaignId' => 'CXXXXXX',
+            'status' => 'enabled',
+            'alreadyAssigned' => false,
+            'orderId' => '12345',
+            'message' => null,
+            'warning' => null,
+            'job' => null,
+            'network' => 'B',
+            'previousNetwork' => null,
+            'previousNetworkCleared' => false,
+            'carrier' => 19,
+            'upstreamCnpId' => 'CAMP003',
+        ])]);
         $r = $c->numbers->assignCampaign(self::TN, ['campaignId' => 'CXXXXXX']);
         $this->assertSame('CXXXXXX', $r['campaignId']);
+        $this->assertSame('enabled', $r['status']);
+        $this->assertFalse($r['alreadyAssigned']);
+        $this->assertSame('12345', $r['orderId']);
+        $this->assertNull($r['warning']);
+        $this->assertNull($r['job']);
+        $this->assertSame('B', $r['network']);
+    }
+
+    public function testAssignCampaignAlreadyBoundIsIdempotent(): void
+    {
+        $c = $this->makeClient([$this->envelope([
+            'number' => self::TN,
+            'campaignId' => 'CXXXXXX',
+            'status' => 'already',
+            'alreadyAssigned' => true,
+            'orderId' => null,
+            'message' => null,
+            'warning' => null,
+            'job' => null,
+            'network' => 'B',
+            'previousNetwork' => 'A',
+            'previousNetworkCleared' => false,
+            'carrier' => 19,
+            'upstreamCnpId' => 'CAMP003',
+        ])]);
+        $r = $c->numbers->assignCampaign(self::TN, ['campaignId' => 'CXXXXXX']);
+        $this->assertSame('already', $r['status']);
+        $this->assertTrue($r['alreadyAssigned']);
+        $this->assertNull($r['orderId']);
+        $this->assertSame('A', $r['previousNetwork']);
+    }
+
+    public function testAssignCampaignPendingPathCReturnsJob(): void
+    {
+        $c = $this->makeClient([$this->envelope([
+            'number' => self::TN,
+            'campaignId' => 'CAMP002',
+            'status' => 'pending',
+            'alreadyAssigned' => false,
+            'orderId' => null,
+            'message' => 'Provisioning started',
+            'warning' => 'Stale registration on path B; removal requested',
+            'job' => [
+                'campaignId' => 'CAMP002',
+                'state' => 'queued',
+                'message' => 'Provisioning started',
+                'createdAt' => '2026-01-02T03:04:05Z',
+                'updatedAt' => '2026-01-02T03:04:05Z',
+            ],
+            'network' => 'C',
+            'previousNetwork' => null,
+            'previousNetworkCleared' => false,
+            'carrier' => 1,
+            'upstreamCnpId' => 'BANDW',
+        ])]);
+        $r = $c->numbers->assignCampaign(self::TN, ['campaignId' => 'CAMP002']);
+        $this->assertSame('pending', $r['status']);
+        $this->assertSame('Provisioning started', $r['message']);
+        $this->assertSame('Stale registration on path B; removal requested', $r['warning']);
+        $this->assertSame('queued', $r['job']['state']);
+        $this->assertSame('C', $r['network']);
+        $this->assertSame(1, $r['carrier']);
+        $this->assertSame('BANDW', $r['upstreamCnpId']);
     }
 
     public function testUnassignCampaignReturns200Body(): void
@@ -179,9 +280,18 @@ final class NumbersServiceTest extends TestCase
 
     public function testSetPortOutPin(): void
     {
-        $c = $this->makeClient([$this->envelope(['number' => self::TN, 'portOutPin' => '1234'])]);
+        $c = $this->makeClient([$this->envelope(['number' => self::TN, 'portOutPin' => '1234', 'changed' => true])]);
         $r = $c->numbers->setPortOutPin(self::TN, ['pin' => '1234']);
         $this->assertSame('1234', $r['portOutPin']);
+        $this->assertTrue($r['changed']);
         $this->assertSame('PATCH', $this->lastRequest()->getMethod());
+    }
+
+    public function testSetPortOutPinAlreadyLockedReturnsUnchanged(): void
+    {
+        $c = $this->makeClient([$this->envelope(['number' => self::TN, 'portOutPin' => '9999', 'changed' => false])]);
+        $r = $c->numbers->setPortOutPin(self::TN, ['pin' => '1234']);
+        $this->assertSame('9999', $r['portOutPin']);
+        $this->assertFalse($r['changed']);
     }
 }
