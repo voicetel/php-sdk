@@ -2,7 +2,7 @@
 
 The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/api/v2.2/) — provision numbers, place orders, validate e911, send messages, and manage your account, with modern PHP 8.1+ ergonomics and battle-tested Guzzle transport.
 
-![Version](https://img.shields.io/badge/version-2.2.14-blue)
+![Version](https://img.shields.io/badge/version-2.2.15-blue)
 ![PHP](https://img.shields.io/badge/php-%E2%89%A58.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
@@ -43,7 +43,7 @@ The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/ap
 - **Account** — profile, sub-accounts, CDRs, credits, payments, MRC, registration, password recovery.
 - **e911** — record provisioning, address validation, lookup, removal.
 - **Gateways** — list, create, update, delete, view bound numbers.
-- **Messaging** — SMS & MMS sending, message history, 10DLC brand and campaign registration, per-number messaging state.
+- **Messaging** — SMS & MMS sending, message history, 10DLC brand and campaign registration, per-number messaging state, and messaging health (account overview, per-number live check, spam-blocked samples, alert-email setting).
 - **Lookups** — CNAM and LRN dips.
 - **iNumbering** — inventory search, coverage queries, number orders, port-in submissions, port-out availability checks.
 - **Support** — ticket create / read / update / delete, threaded messages, replies.
@@ -192,7 +192,7 @@ catch (ApiError $e) {
 
 These endpoints are limited to **6 requests per hour per IP**:
 
-- `account/info` (`$client->account->get()`)
+- `account` (`$client->account->get()`)
 - `account/cdr`
 - `account/recurring-charges`
 - `account/payments`

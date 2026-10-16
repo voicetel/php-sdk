@@ -137,4 +137,95 @@ final class MessagingService
         $r = $this->t->request('GET', '/v2.2/numbers/messaging', query: $q);
         return $r;
     }
+
+    /**
+     * GET /v2.2/messaging/health — account-wide messaging health overview.
+     *
+     * Mirrors the portal Messaging tab: summary counts (numbers, messaging on,
+     * healthy, needing attention, in progress), campaigns with carrier-review
+     * progress, numbers needing attention (each with a plain-language title,
+     * detail and the actions that fix it: assign, disable, samples), 14 days of
+     * delivery counts (delivered, failed, blocked as spam, refused because the
+     * number is not enabled), and the alert-email setting. Updated hourly.
+     *
+     * The API spec defines no response schema for this endpoint, so the decoded
+     * JSON object is returned as-is.
+     *
+     * @return array<string, mixed>
+     */
+    public function health(): array
+    {
+        /** @var array<string, mixed> $r */
+        $r = $this->t->request('GET', '/v2.2/messaging/health');
+        return $r;
+    }
+
+    /**
+     * GET /v2.2/messaging/health/alerts — the alert-email setting: whether new
+     * messaging problems are emailed to the account.
+     *
+     * The spec defines no response schema, so the decoded JSON object is returned as-is.
+     *
+     * @return array<string, mixed>
+     */
+    public function healthAlerts(): array
+    {
+        /** @var array<string, mixed> $r */
+        $r = $this->t->request('GET', '/v2.2/messaging/health/alerts');
+        return $r;
+    }
+
+    /**
+     * PUT /v2.2/messaging/health/alerts — turn alert emails on or off.
+     *
+     * When enabled, the account is emailed as new messaging problems are found
+     * (at most one digest about every 20 hours).
+     *
+     * The spec defines no response schema, so the decoded JSON object is returned as-is.
+     *
+     * @return array<string, mixed>
+     */
+    public function setHealthAlerts(bool $enabled): array
+    {
+        /** @var array<string, mixed> $r */
+        $r = $this->t->request('PUT', '/v2.2/messaging/health/alerts', body: ['enabled' => $enabled]);
+        return $r;
+    }
+
+    /**
+     * POST /v2.2/messaging/health/check — live health check of one number.
+     *
+     * Reports in service, messaging enabled, campaign approved, assigned to the
+     * campaign by the messaging provider, delivery failures in the last 24 hours,
+     * and enablement in progress. Limited to 30 checks per hour per account.
+     *
+     * The spec defines no response schema, so the decoded JSON object is returned as-is.
+     *
+     * @param string $number 10-digit number on the account
+     * @return array<string, mixed>
+     */
+    public function healthCheck(string $number): array
+    {
+        /** @var array<string, mixed> $r */
+        $r = $this->t->request('POST', '/v2.2/messaging/health/check', body: ['number' => $number]);
+        return $r;
+    }
+
+    /**
+     * GET /v2.2/messaging/health/samples — recent messages blocked as spam.
+     *
+     * Up to 3 recent outbound messages from the number that carriers blocked as
+     * spam (time, masked recipient, text, reason), to help review content.
+     *
+     * The spec defines no response schema, so the decoded JSON object is returned as-is.
+     *
+     * @param string $number 10-digit number on the account
+     * @return array<string, mixed>
+     */
+    public function healthSamples(string $number): array
+    {
+        /** @var array<string, mixed> $r */
+        $r = $this->t->request('GET', '/v2.2/messaging/health/samples', query: ['number' => $number]);
+        return $r;
+    }
 }

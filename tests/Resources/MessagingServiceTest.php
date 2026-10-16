@@ -97,4 +97,52 @@ final class MessagingServiceTest extends TestCase
         $q = $this->lastRequest()->getUri()->getQuery();
         $this->assertStringContainsString('numbers=2015550123%2C2125550000', $q);
     }
+
+    // v2.2.15: messaging-health endpoints have no response schema in the spec, so the
+    // SDK returns the decoded JSON as an array verbatim; bodies/query are still shaped.
+    public function testHealthReturnsRawPayload(): void
+    {
+        $c = $this->makeClient([$this->envelope(['summary' => ['numbers' => 3, 'healthy' => 2]])]);
+        $r = $c->messaging->health();
+        $this->assertSame(3, $r['summary']['numbers']);
+        $this->assertSame('GET', $this->lastRequest()->getMethod());
+        $this->assertSame('/v2.2/messaging/health', $this->lastRequest()->getUri()->getPath());
+    }
+
+    public function testHealthAlertsGetAndSet(): void
+    {
+        $c = $this->makeClient([
+            $this->envelope(['enabled' => true]),
+            $this->envelope(['enabled' => false]),
+        ]);
+        $get = $c->messaging->healthAlerts();
+        $this->assertTrue($get['enabled']);
+        $this->assertSame('/v2.2/messaging/health/alerts', $this->lastRequest()->getUri()->getPath());
+
+        $set = $c->messaging->setHealthAlerts(false);
+        $this->assertFalse($set['enabled']);
+        $this->assertSame('PUT', $this->lastRequest()->getMethod());
+        $sent = json_decode((string) $this->lastRequest()->getBody(), true);
+        $this->assertFalse($sent['enabled']);
+    }
+
+    public function testHealthCheck(): void
+    {
+        $c = $this->makeClient([$this->envelope(['number' => '2125550123', 'inService' => true])]);
+        $r = $c->messaging->healthCheck('2125550123');
+        $this->assertTrue($r['inService']);
+        $this->assertSame('POST', $this->lastRequest()->getMethod());
+        $this->assertSame('/v2.2/messaging/health/check', $this->lastRequest()->getUri()->getPath());
+        $sent = json_decode((string) $this->lastRequest()->getBody(), true);
+        $this->assertSame('2125550123', $sent['number']);
+    }
+
+    public function testHealthSamples(): void
+    {
+        $c = $this->makeClient([$this->envelope(['samples' => [['reason' => 'spam']]])]);
+        $r = $c->messaging->healthSamples('2125550123');
+        $this->assertSame('spam', $r['samples'][0]['reason']);
+        $this->assertSame('/v2.2/messaging/health/samples', $this->lastRequest()->getUri()->getPath());
+        $this->assertStringContainsString('number=2125550123', $this->lastRequest()->getUri()->getQuery());
+    }
 }
