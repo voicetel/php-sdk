@@ -97,7 +97,9 @@ final class INumberingService
     /**
      * POST /v2.2/orders — purchase one or more TNs.
      *
-     * `numbers` may contain plain string TNs or {"number", "route"} objects.
+     * `numbers` may contain plain string TNs or {"number", "route"} objects,
+     * where route is the global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE,
+     * 4 DID (default), 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE.
      *
      * @param array<string, mixed> $body
      * @return array<string, mixed>

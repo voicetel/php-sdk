@@ -56,9 +56,9 @@ final class NumbersServiceTest extends TestCase
 
     public function testSetRoute(): void
     {
-        $c = $this->makeClient([$this->envelope(['number' => self::TN, 'route' => 7])]);
-        $r = $c->numbers->setRoute(self::TN, ['route' => 7]);
-        $this->assertSame(7, $r['route']);
+        $c = $this->makeClient([$this->envelope(['number' => self::TN, 'route' => 4])]);
+        $r = $c->numbers->setRoute(self::TN, ['route' => 4]);
+        $this->assertSame(4, $r['route']);
     }
 
     public function testSetTranslation(): void

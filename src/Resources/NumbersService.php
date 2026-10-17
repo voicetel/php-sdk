@@ -35,7 +35,9 @@ final class NumbersService
     /**
      * POST /v2.2/numbers — attach a TN to the account.
      *
-     * Required body: number. Optional: route (gateway id; default 4 = DID).
+     * Required body: number. Optional: route — global route type: 1 USER,
+     * 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML, 8 SDN,
+     * 9 MOBILE.
      *
      * @param array<string, mixed> $body
      * @return array<string, mixed>
@@ -68,7 +70,9 @@ final class NumbersService
     /**
      * PATCH /v2.2/numbers/{number} — transfer a TN to another account in the org.
      *
-     * Required body: accountId, route.
+     * Required body: accountId, route — route is the global route type on the
+     * destination account: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
+     * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE.
      *
      * @param array<string, mixed> $body
      * @return array<string, mixed>
@@ -89,7 +93,9 @@ final class NumbersService
     /**
      * PUT /v2.2/numbers/{number}/route — update outbound route.
      *
-     * @param array<string, mixed> $body  required: route (int)
+     * @param array<string, mixed> $body  required: route (int) — global route
+     *   type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
+     *   8 SDN, 9 MOBILE
      * @return array<string, mixed>
      */
     public function setRoute(string $number, array $body): array
