@@ -9,9 +9,9 @@ use VoiceTel\Sdk\Transport;
 /**
  * AccountService groups every operation under the Account tag.
  *
- * Note: `cdr`, `recurringCharges`, `payments`, `registration`, `info`, and
- * `apiKey` (the login exchange) share a 6 req/hour/IP rate limit. Bursting
- * will trigger 429s — the transport auto-retries with backoff (default 2).
+ * Note: `get` (account info), `cdr`, `recurringCharges`, and `apiKey` (the
+ * login exchange) are limited to 6 req/hour/IP. Bursting will trigger 429s —
+ * the transport auto-retries with backoff (default 2).
  */
 final class AccountService
 {
@@ -64,7 +64,7 @@ final class AccountService
     }
 
     /**
-     * POST /v2.2/accounts — public sign-up flow.
+     * POST /v2.2/accounts — public sign-up flow. No auth required.
      *
      * Required keys: name, email. Optional: promo.
      *
@@ -74,7 +74,7 @@ final class AccountService
     public function signup(array $body): array
     {
         /** @var array<string, mixed> $r */
-        $r = $this->t->request('POST', '/v2.2/accounts', body: $body);
+        $r = $this->t->request('POST', '/v2.2/accounts', body: $body, requireAuth: false);
         return $r;
     }
 
@@ -102,12 +102,17 @@ final class AccountService
     /**
      * GET /v2.2/account/credits — full credit history, newest first.
      *
+     * @param string|null $status optional invoice-status filter: "paid" | "unpaid"
      * @return array<string, mixed>
      */
-    public function credits(): array
+    public function credits(?string $status = null): array
     {
+        $q = [];
+        if ($status !== null && $status !== '') {
+            $q['status'] = $status;
+        }
         /** @var array<string, mixed> $r */
-        $r = $this->t->request('GET', '/v2.2/account/credits');
+        $r = $this->t->request('GET', '/v2.2/account/credits', query: $q);
         return $r;
     }
 
@@ -128,8 +133,6 @@ final class AccountService
     /**
      * GET /v2.2/account/payments — full payment history, newest first.
      *
-     * Rate-limited: 6 req/hour/IP.
-     *
      * @return array<string, mixed>
      */
     public function payments(): array
@@ -141,8 +144,6 @@ final class AccountService
 
     /**
      * GET /v2.2/account/registration — current SIP registration.
-     *
-     * Rate-limited: 6 req/hour/IP.
      *
      * @return array<string, mixed>
      */

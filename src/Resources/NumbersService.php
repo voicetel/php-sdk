@@ -315,30 +315,37 @@ final class NumbersService
      *
      * Unusually for a DELETE, this returns 200 with a body.
      *
+     * @param string $campaignId TCR campaign id the number is being removed from (required)
      * @return array<string, mixed>
      */
-    public function unassignCampaign(string $number): array
+    public function unassignCampaign(string $number, string $campaignId): array
     {
         /** @var array<string, mixed> $r */
-        $r = $this->t->request('DELETE', '/v2.2/numbers/' . rawurlencode($number) . '/messaging-campaign');
+        $r = $this->t->request(
+            'DELETE',
+            '/v2.2/numbers/' . rawurlencode($number) . '/messaging-campaign',
+            query: ['campaignId' => $campaignId],
+        );
         return $r;
     }
 
     /**
      * DELETE /v2.2/numbers/messaging-campaign — bulk-remove campaign binding from many TNs.
      *
-     * Unusually for a DELETE, this returns 200 with a body.
+     * Unusually for a DELETE, this returns 200 with a body. No request body;
+     * both parameters travel in the query string.
      *
-     * @param array<int, string> $numbers
+     * @param array<int, string> $numbers    10-digit TNs to remove (max 1000)
+     * @param string             $campaignId TCR campaign id the numbers are removed from (required)
      * @return array<string, mixed>
      */
-    public function bulkUnassignCampaign(array $numbers): array
+    public function bulkUnassignCampaign(array $numbers, string $campaignId): array
     {
         /** @var array<string, mixed> $r */
         $r = $this->t->request(
             'DELETE',
             '/v2.2/numbers/messaging-campaign',
-            body: ['numbers' => $numbers],
+            query: ['numbers' => implode(',', $numbers), 'campaignId' => $campaignId],
         );
         return $r;
     }

@@ -56,7 +56,7 @@ final class ClientTest extends TestCase
             $this->envelope(['apikey' => 'aabbccddeeff112233445566778899aa']),
         ], apiKey: '');
 
-        $key = $c->login(1000000001, 'hunter2');
+        $key = $c->login('1000000001', 'hunter2');
 
         $this->assertSame('aabbccddeeff112233445566778899aa', $key);
         $this->assertSame('aabbccddeeff112233445566778899aa', $c->apiKey());
@@ -66,7 +66,7 @@ final class ClientTest extends TestCase
         $this->assertSame('/v2.2/account/api-key', $req->getUri()->getPath());
         $this->assertFalse($req->hasHeader('Authorization'), 'login must not send a bearer');
         $decoded = json_decode((string) $req->getBody(), true);
-        $this->assertSame(1000000001, $decoded['username']);
+        $this->assertSame('1000000001', $decoded['username']);
         $this->assertSame('hunter2', $decoded['password']);
     }
 
@@ -74,7 +74,7 @@ final class ClientTest extends TestCase
     {
         $c = $this->makeClient([$this->envelope(['apikey' => ''])], apiKey: '');
         try {
-            $c->login(1, 'pw');
+            $c->login('1', 'pw');
             $this->fail('expected ApiError');
         } catch (ApiError $e) {
             $this->assertSame(ErrorKind::Authentication, $e->kind);

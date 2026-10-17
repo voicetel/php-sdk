@@ -18,20 +18,25 @@ final class MessagingService
     }
 
     /**
-     * GET /v2.2/messages — message history.
+     * GET /v2.2/messages — message history for one number.
      *
-     * Optional query keys: number, start (unix ts), end (unix ts), type ("sms" | "mms" | "dlr").
-     *
-     * @param array<string, scalar> $query
+     * @param string      $number 10-digit TN whose messages are returned (required)
+     * @param int|null    $from   unix timestamp range start
+     * @param int|null    $to     unix timestamp range end
+     * @param string|null $type   "sms" | "mms" | "dlr"
      * @return array<string, mixed>
      */
-    public function history(array $query = []): array
+    public function history(string $number, ?int $from = null, ?int $to = null, ?string $type = null): array
     {
-        $q = [];
-        foreach ($query as $k => $v) {
-            if ($v !== '' && $v !== 0 && $v !== null) {
-                $q[$k] = (string) $v;
-            }
+        $q = ['number' => $number];
+        if ($from !== null) {
+            $q['from'] = $from;
+        }
+        if ($to !== null) {
+            $q['to'] = $to;
+        }
+        if ($type !== null && $type !== '') {
+            $q['type'] = $type;
         }
         /** @var array<string, mixed> $r */
         $r = $this->t->request('GET', '/v2.2/messages', query: $q);
@@ -93,12 +98,15 @@ final class MessagingService
      *      per carrier: {carrier, status ("ACTIVE"|"REJECTED"|"SUSPENDED"|
      *      "UNSUSPENDED"|"TERMINATED"), detail, updatedAt}
      *
+     * @param array<int, string>|string $ids campaign ids (max 100) — an array of
+     *        ids or a comma-separated string
      * @return array<string, mixed>
      */
-    public function campaignStatus(): array
+    public function campaignStatus(array|string $ids): array
     {
+        $q = ['ids' => is_array($ids) ? implode(',', $ids) : $ids];
         /** @var array<string, mixed> $r */
-        $r = $this->t->request('GET', '/v2.2/messaging/campaigns');
+        $r = $this->t->request('GET', '/v2.2/messaging/campaigns', query: $q);
         return $r;
     }
 
@@ -120,19 +128,14 @@ final class MessagingService
     }
 
     /**
-     * GET /v2.2/numbers/messaging — messaging state for many numbers at once.
+     * GET /v2.2/numbers/messaging — messaging state for a set of numbers.
      *
-     * Pass an empty array (the default) for "all numbers on the account".
-     *
-     * @param array<int, string> $numbers list of 10-digit TNs
+     * @param array<int, string> $numbers list of 10-digit TNs (max 1000)
      * @return array<string, mixed>
      */
-    public function numbersState(array $numbers = []): array
+    public function numbersState(array $numbers): array
     {
-        $q = [];
-        if ($numbers !== []) {
-            $q['numbers'] = implode(',', $numbers);
-        }
+        $q = ['numbers' => implode(',', $numbers)];
         /** @var array<string, mixed> $r */
         $r = $this->t->request('GET', '/v2.2/numbers/messaging', query: $q);
         return $r;

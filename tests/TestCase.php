@@ -60,7 +60,8 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * Build a JSON error response.
+     * Build a JSON error response. The default body matches the spec's
+     * errorResponse envelope: {"status":"error","error":{"code":int,"message":string}}.
      *
      * @param array<string, mixed> $body
      */
@@ -69,7 +70,10 @@ abstract class TestCase extends BaseTestCase
         return new Response(
             $status,
             array_merge(['Content-Type' => 'application/json'], $headers),
-            json_encode($body ?: ['message' => sprintf('HTTP %d test error', $status)], JSON_THROW_ON_ERROR),
+            json_encode($body ?: [
+                'status' => 'error',
+                'error' => ['code' => $status, 'message' => sprintf('HTTP %d test error', $status)],
+            ], JSON_THROW_ON_ERROR),
         );
     }
 

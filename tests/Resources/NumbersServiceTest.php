@@ -263,19 +263,22 @@ final class NumbersServiceTest extends TestCase
     public function testUnassignCampaignReturns200Body(): void
     {
         $c = $this->makeClient([$this->envelope(['number' => self::TN, 'campaignId' => 'CXXXXXX', 'unassigned' => true])]);
-        $r = $c->numbers->unassignCampaign(self::TN);
+        $r = $c->numbers->unassignCampaign(self::TN, 'CXXXXXX');
         $this->assertTrue($r['unassigned']);
         $this->assertSame('DELETE', $this->lastRequest()->getMethod());
+        $this->assertStringContainsString('campaignId=CXXXXXX', $this->lastRequest()->getUri()->getQuery());
     }
 
     public function testBulkUnassignCampaignReturns200Body(): void
     {
         $c = $this->makeClient([$this->envelope(['campaignId' => 'C', 'unassignedNumbers' => [self::TN]])]);
-        $r = $c->numbers->bulkUnassignCampaign([self::TN]);
+        $r = $c->numbers->bulkUnassignCampaign([self::TN], 'C');
         $this->assertContains(self::TN, $r['unassignedNumbers']);
         $this->assertSame('DELETE', $this->lastRequest()->getMethod());
-        $sent = json_decode((string) $this->lastRequest()->getBody(), true);
-        $this->assertSame([self::TN], $sent['numbers']);
+        $q = $this->lastRequest()->getUri()->getQuery();
+        $this->assertStringContainsString('numbers=2015550123', $q);
+        $this->assertStringContainsString('campaignId=C', $q);
+        $this->assertSame('', (string) $this->lastRequest()->getBody());
     }
 
     public function testSetPortOutPin(): void

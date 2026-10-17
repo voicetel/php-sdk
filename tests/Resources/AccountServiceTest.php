@@ -44,6 +44,14 @@ final class AccountServiceTest extends TestCase
         $this->assertSame('/v2.2/accounts', $this->lastRequest()->getUri()->getPath());
     }
 
+    public function testSignupDoesNotRequireAuth(): void
+    {
+        $c = $this->makeClient([$this->envelope(['username' => '1', 'password' => 'pw'])], apiKey: '');
+        $r = $c->account->signup(['name' => 'N', 'email' => 'e@f.g']);
+        $this->assertSame('pw', $r['password']);
+        $this->assertFalse($this->lastRequest()->hasHeader('Authorization'));
+    }
+
     public function testCdrWithRange(): void
     {
         $c = $this->makeClient([$this->envelope(['cdr' => [], 'start' => 100, 'end' => 200])]);
@@ -67,6 +75,13 @@ final class AccountServiceTest extends TestCase
         $this->assertArrayHasKey('credits', $r);
     }
 
+    public function testCreditsWithStatusFilter(): void
+    {
+        $c = $this->makeClient([$this->envelope(['credits' => []])]);
+        $c->account->credits('unpaid');
+        $this->assertStringContainsString('status=unpaid', $this->lastRequest()->getUri()->getQuery());
+    }
+
     public function testRecurringCharges(): void
     {
         $c = $this->makeClient([$this->envelope(['charges' => [], 'total' => 12.5])]);
@@ -84,7 +99,7 @@ final class AccountServiceTest extends TestCase
 
     public function testRegistration(): void
     {
-        $c = $this->makeClient([$this->envelope(['agent' => 'X-UA', 'uri' => 'sip:x', 'expires' => 3600])]);
+        $c = $this->makeClient([$this->envelope(['agent' => 'X-UA', 'uri' => 'sip:x'])]);
         $r = $c->account->registration();
         $this->assertSame('X-UA', $r['agent']);
     }

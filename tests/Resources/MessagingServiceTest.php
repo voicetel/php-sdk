@@ -10,12 +10,12 @@ final class MessagingServiceTest extends TestCase
 {
     public function testHistoryWithFilters(): void
     {
-        $c = $this->makeClient([$this->envelope(['messages' => [], 'number' => '2015550123', 'type' => 'sms', 'fromTs' => 0, 'toTs' => 0])]);
-        $c->messaging->history(['number' => '2015550123', 'type' => 'sms', 'start' => 100]);
+        $c = $this->makeClient([$this->envelope(['messages' => [], 'number' => '2015550123', 'type' => 'sms', 'fromTs' => 100, 'toTs' => 0])]);
+        $c->messaging->history('2015550123', from: 100, type: 'sms');
         $q = $this->lastRequest()->getUri()->getQuery();
         $this->assertStringContainsString('number=2015550123', $q);
         $this->assertStringContainsString('type=sms', $q);
-        $this->assertStringContainsString('start=100', $q);
+        $this->assertStringContainsString('from=100', $q);
     }
 
     public function testSendUsesWireFieldNames(): void
@@ -42,8 +42,9 @@ final class MessagingServiceTest extends TestCase
     public function testCampaignStatus(): void
     {
         $c = $this->makeClient([$this->envelope(['campaigns' => []])]);
-        $r = $c->messaging->campaignStatus();
+        $r = $c->messaging->campaignStatus(['CAMP002']);
         $this->assertSame([], $r['campaigns']);
+        $this->assertStringContainsString('ids=CAMP002', $this->lastRequest()->getUri()->getQuery());
     }
 
     public function testCampaignStatusIncludesDca(): void
@@ -68,7 +69,7 @@ final class MessagingServiceTest extends TestCase
             ],
             ['id' => 'NOPE', 'status' => 'CAMPAIGN_INVALID_ID', 'numbers' => [], 'dca' => null],
         ]])]);
-        $r = $c->messaging->campaignStatus();
+        $r = $c->messaging->campaignStatus(['CAMP002', 'NOPE']);
         $this->assertSame('CAMPAIGN_DCA_REJECTED', $r['campaigns'][0]['status']);
         $this->assertTrue($r['campaigns'][0]['dca']['electionComplete']);
         $this->assertSame('T-Mobile', $r['campaigns'][0]['dca']['carriers'][0]['carrier']);
@@ -83,11 +84,11 @@ final class MessagingServiceTest extends TestCase
         $this->assertSame('POST', $this->lastRequest()->getMethod());
     }
 
-    public function testNumbersStateAll(): void
+    public function testNumbersStateSendsNumbers(): void
     {
         $c = $this->makeClient([$this->envelope(['numbers' => []])]);
-        $c->messaging->numbersState();
-        $this->assertSame('', $this->lastRequest()->getUri()->getQuery());
+        $c->messaging->numbersState(['2015550123']);
+        $this->assertStringContainsString('numbers=2015550123', $this->lastRequest()->getUri()->getQuery());
     }
 
     public function testNumbersStateFilter(): void

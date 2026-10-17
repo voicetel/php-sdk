@@ -22,6 +22,8 @@ final class SupportService
     /**
      * GET /v2.2/support/tickets — list every ticket on the account.
      *
+     * Response data shape: {totalCount: int, tickets: array}.
+     *
      * @return array<string, mixed>
      */
     public function list(): array

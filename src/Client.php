@@ -24,7 +24,7 @@ use VoiceTel\Sdk\Resources\SupportService;
  *
  * ```
  * $client = new \VoiceTel\Sdk\Client();
- * $client->login(1000000001, 'hunter2');
+ * $client->login('1000000001', 'hunter2');
  * print_r($client->account->get());
  * ```
  */
@@ -96,12 +96,14 @@ final class Client
      * Exchange username + password for a 32-hex bearer token, install it on
      * this client, and return it.
      *
-     * The exchange counts against the 6 req/hour/IP rate limit shared by every
-     * account/* endpoint (cdr, mrc, payments, registration, api-key).
+     * The exchange counts against the 6 req/hour/IP rate limit shared by the
+     * other rate-limited account endpoints (account info, cdr, recurring-charges).
      *
+     * @param string $username account username (a 10-digit string, e.g. "1000000001")
+     * @param string $password account password
      * @throws ApiError on a non-2xx response or transport error
      */
-    public function login(int $username, string $password): string
+    public function login(string $username, string $password): string
     {
         $data = $this->transport->request(
             method: 'POST',

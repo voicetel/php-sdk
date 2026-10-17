@@ -29,7 +29,7 @@ final class SmokeTest extends TestCase
     {
         $base = getenv('VOICETEL_BASE_URL');
         $c = new Client(baseUrl: is_string($base) && $base !== '' ? $base : null);
-        $key = $c->login((int) getenv('VOICETEL_USERNAME'), (string) getenv('VOICETEL_PASSWORD'));
+        $key = $c->login((string) getenv('VOICETEL_USERNAME'), (string) getenv('VOICETEL_PASSWORD'));
         $this->assertNotEmpty($key);
 
         $profile = $c->account->get();
@@ -40,7 +40,7 @@ final class SmokeTest extends TestCase
     {
         $base = getenv('VOICETEL_BASE_URL');
         $c = new Client(baseUrl: is_string($base) && $base !== '' ? $base : null);
-        $c->login((int) getenv('VOICETEL_USERNAME'), (string) getenv('VOICETEL_PASSWORD'));
+        $c->login((string) getenv('VOICETEL_USERNAME'), (string) getenv('VOICETEL_PASSWORD'));
         $numbers = $c->numbers->list();
         $this->assertArrayHasKey('numbers', $numbers);
     }

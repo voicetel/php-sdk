@@ -2,7 +2,7 @@
 
 The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/api/v2.2/) — provision numbers, place orders, validate e911, send messages, and manage your account, with modern PHP 8.1+ ergonomics and battle-tested Guzzle transport.
 
-![Version](https://img.shields.io/badge/version-2.2.15-blue)
+![Version](https://img.shields.io/badge/version-2.2.16-blue)
 ![PHP](https://img.shields.io/badge/php-%E2%89%A58.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
@@ -38,7 +38,7 @@ The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/ap
 - **Structured `ApiError`** with typed `kind` so you can `match ($e->kind) { ErrorKind::RateLimit => ... }` without parsing HTTP status codes.
 - **Envelope-aware** — strips the `{"status":"success","data": ...}` wrapper before returning the inner payload.
 
-### 📞 Complete API Coverage (73 operations)
+### 📞 Complete API Coverage (79 operations)
 - **Numbers** — list, get, add, remove, route, translate, CNAM, LIDB, fax, forward, SMS, messaging campaigns, port-out PIN, account moves.
 - **Account** — profile, sub-accounts, CDRs, credits, payments, MRC, registration, password recovery.
 - **e911** — record provisioning, address validation, lookup, removal.
@@ -51,7 +51,7 @@ The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/ap
 - **Authentication** — switch between Digest, IP-only, or hybrid modes; rotate passwords.
 
 ### 🧪 Battle-Tested
-- **106 unit tests** at **94%+ line coverage** with PHPUnit 10.
+- **114 unit tests** at **94%+ line coverage** with PHPUnit 10.
 - **Mocked Guzzle** via `GuzzleHttp\Handler\MockHandler` — every method and every error path exercised, no network in CI.
 - **Read-only integration scaffolding** gated by `VOICETEL_USERNAME` / `VOICETEL_PASSWORD` env vars.
 
@@ -79,7 +79,7 @@ use VoiceTel\Sdk\Client;
 $client = new Client();
 
 // Exchange username + password for an API key (one-time per session)
-$client->login(1000000001, 'hunter2');
+$client->login('1000000001', 'hunter2');
 
 // Typed responses — arrays with documented shapes.
 $me = $client->account->get();
@@ -103,7 +103,7 @@ Or, if you already have an API key, skip `login()` and pass it straight to the c
 ```php
 $client = new Client(apiKey: getenv('VOICETEL_API_KEY'));
 
-$coverage = $client->iNumbering->coverage(['state' => 'NJ']);
+$coverage = $client->iNumbering->coverage('npanxx', npa: '201');
 foreach ($coverage['coverage'] as $bucket) {
     printf("%s-%s: %d TNs available\n", $bucket['npa'], $bucket['nxx'], $bucket['count']);
 }
@@ -119,7 +119,7 @@ Re-fetch the API key after any password change — the old one is invalidated.
 
 ```php
 $client = new Client();
-$key = $client->login(1000000001, 'hunter2');
+$key = $client->login('1000000001', 'hunter2');
 // $key is the new 32-hex bearer; the client already has it installed.
 ```
 
@@ -132,7 +132,7 @@ $key = $client->login(1000000001, 'hunter2');
 | Authentication | `$client->authentication` | `$client->authentication->update(['authType' => 1])` |
 | e911 | `$client->e911` | `$client->e911->validate(['address1' => '1 Way', ...])` |
 | Gateways | `$client->gateways` | `$client->gateways->list()` |
-| iNumbering | `$client->iNumbering` | `$client->iNumbering->searchInventory(['npa' => 201])` |
+| iNumbering | `$client->iNumbering` | `$client->iNumbering->searchInventory('201555*', quantity: 25)` |
 | Lookups | `$client->lookups` | `$client->lookups->lrn('2015550123', '2125550000')` |
 | Messaging | `$client->messaging` | `$client->messaging->send(['fromNumber' => ..., 'toNumber' => ..., 'text' => ...])` |
 | Numbers | `$client->numbers` | `$client->numbers->assignCampaign('2015550123', ['campaignId' => 'CXXXXXX'])` |
@@ -195,11 +195,11 @@ These endpoints are limited to **6 requests per hour per IP**:
 - `account` (`$client->account->get()`)
 - `account/cdr`
 - `account/recurring-charges`
-- `account/payments`
-- `account/registration`
 - `account/api-key` (`$client->login()`)
 
-The SDK automatically retries 429 responses with `Retry-After` honored, up to `maxRetries` (default 2). To bump it:
+`POST /v2.2/messaging/health/check` is separately limited to **30 checks per hour per account**.
+
+The SDK automatically retries 429 responses with `Retry-After` honored (capped at 8s), up to `maxRetries` (default 2). To bump it:
 
 ```php
 $client = new Client(

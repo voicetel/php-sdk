@@ -11,19 +11,24 @@ final class INumberingServiceTest extends TestCase
     public function testSearchInventoryAppendsQuery(): void
     {
         $c = $this->makeClient([$this->envelope(['numbers' => []])]);
-        $c->iNumbering->searchInventory(['npa' => 201, 'state' => 'NJ', 'limit' => 25]);
+        $c->iNumbering->searchInventory('201555', quantity: 25, province: 'NJ', rateCenter: 'NEWARK', lata: '224');
         $q = $this->lastRequest()->getUri()->getQuery();
-        $this->assertStringContainsString('npa=201', $q);
-        $this->assertStringContainsString('state=NJ', $q);
-        $this->assertStringContainsString('limit=25', $q);
+        $this->assertStringContainsString('tnMask=201555', $q);
+        $this->assertStringContainsString('quantity=25', $q);
+        $this->assertStringContainsString('province=NJ', $q);
+        $this->assertStringContainsString('rateCenter=NEWARK', $q);
+        $this->assertStringContainsString('lata=224', $q);
     }
 
     public function testCoverage(): void
     {
         $c = $this->makeClient([$this->envelope(['coverage' => [['count' => 10]]])]);
-        $r = $c->iNumbering->coverage(['state' => 'NJ']);
+        $r = $c->iNumbering->coverage('npanxx', npa: '201');
         $this->assertSame(10, $r['coverage'][0]['count']);
         $this->assertSame('/v2.2/inventory/coverage', $this->lastRequest()->getUri()->getPath());
+        $q = $this->lastRequest()->getUri()->getQuery();
+        $this->assertStringContainsString('countBy=npanxx', $q);
+        $this->assertStringContainsString('npa=201', $q);
     }
 
     public function testOrder(): void
@@ -43,7 +48,7 @@ final class INumberingServiceTest extends TestCase
     public function testPort(): void
     {
         $c = $this->makeClient([$this->envelope(['port' => ['status' => 'in_progress']])]);
-        $r = $c->iNumbering->port(99);
+        $r = $c->iNumbering->port('99');
         $this->assertSame('in_progress', $r['port']['status']);
         $this->assertSame('/v2.2/ports/99', $this->lastRequest()->getUri()->getPath());
     }

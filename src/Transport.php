@@ -227,15 +227,27 @@ final class Transport
                 $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
                 if (is_array($decoded)) {
                     $body = $decoded;
-                    if (isset($decoded['code']) && is_string($decoded['code'])) {
-                        $code = $decoded['code'];
-                    } elseif (isset($decoded['error']) && is_string($decoded['error'])) {
-                        $code = $decoded['error'];
-                    }
-                    if (isset($decoded['message']) && is_string($decoded['message'])) {
-                        $message = $decoded['message'];
-                    } elseif (isset($decoded['error']) && is_string($decoded['error'])) {
-                        $message = $decoded['error'];
+                    $error = $decoded['error'] ?? null;
+                    if (is_array($error)) {
+                        // Spec envelope: {"status":"error","error":{"code":int,"message":string}}
+                        if (isset($error['code']) && (is_int($error['code']) || is_string($error['code']))) {
+                            $code = (string) $error['code'];
+                        }
+                        if (isset($error['message']) && is_string($error['message'])) {
+                            $message = $error['message'];
+                        }
+                    } else {
+                        // Legacy flat shapes: {"code":..,"message":..} or {"error":".."}
+                        if (isset($decoded['code']) && (is_int($decoded['code']) || is_string($decoded['code']))) {
+                            $code = (string) $decoded['code'];
+                        } elseif (is_string($error)) {
+                            $code = $error;
+                        }
+                        if (isset($decoded['message']) && is_string($decoded['message'])) {
+                            $message = $decoded['message'];
+                        } elseif (is_string($error)) {
+                            $message = $error;
+                        }
                     }
                 }
             } catch (JsonException) {
@@ -250,7 +262,12 @@ final class Transport
             statusCode: $status,
             code: $code,
             body: $body,
-            message: sprintf('voicetel: HTTP %d%s: %s', $status, $code !== '' ? ' ' . $code : '', $message),
+            message: sprintf(
+                'voicetel: HTTP %d%s: %s',
+                $status,
+                $code !== '' && $code !== (string) $status ? ' ' . $code : '',
+                $message,
+            ),
         );
     }
 
@@ -267,14 +284,15 @@ final class Transport
 
     /**
      * Compute the delay before the next retry. Honors a Retry-After header
-     * (integer seconds) if present; otherwise uses exponential backoff capped at 8s.
+     * (integer seconds, capped at 8s) if present; otherwise uses exponential
+     * backoff capped at 8s.
      */
     private function backoffDelay(int $attempt, ?ResponseInterface $resp): float
     {
         if ($resp !== null) {
             $h = $resp->getHeaderLine('Retry-After');
             if ($h !== '' && ctype_digit($h)) {
-                return (float) $h;
+                return min((float) $h, 8.0);
             }
         }
         $base = 0.5;

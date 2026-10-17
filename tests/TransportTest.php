@@ -48,6 +48,22 @@ final class TransportTest extends TestCase
         $this->assertCount(3, $this->history);
     }
 
+    public function testRetryAfterIsCappedAt8Seconds(): void
+    {
+        $c = $this->makeClient([
+            new Response(429, ['Retry-After' => '3600'], '{"message":"slow down"}'),
+            $this->envelope(['username' => 'ok']),
+        ], maxRetries: 1);
+        $slept = [];
+        $c->transport()->sleeper = static function (float $s) use (&$slept): void {
+            $slept[] = $s;
+        };
+
+        $out = $c->account->get();
+        $this->assertSame('ok', $out['username']);
+        $this->assertSame([8.0], $slept);
+    }
+
     public function testRetriesExhaustedOn429YieldRateLimitError(): void
     {
         $c = $this->makeClient([
@@ -89,15 +105,42 @@ final class TransportTest extends TestCase
 
         foreach ($mapping as $code => $kind) {
             // 5xx will be retried by default — disable retries.
-            $c = $this->makeClient([new Response($code, [], '{"message":"x","code":"E_X"}')], maxRetries: 0);
+            $c = $this->makeClient([
+                new Response($code, [], json_encode([
+                    'status' => 'error',
+                    'error' => ['code' => $code, 'message' => 'x'],
+                ])),
+            ], maxRetries: 0);
             try {
                 $c->account->get();
                 $this->fail("expected ApiError for $code");
             } catch (ApiError $e) {
                 $this->assertSame($kind, $e->kind, "wrong kind for $code");
                 $this->assertSame($code, $e->statusCode);
-                $this->assertSame('E_X', $e->code());
+                $this->assertSame((string) $code, $e->code());
             }
+        }
+    }
+
+    public function testSpecErrorEnvelopeIsParsed(): void
+    {
+        $c = $this->makeClient([
+            new Response(400, ['Content-Type' => 'application/json'], json_encode([
+                'status' => 'error',
+                'error' => ['code' => 400, 'message' => 'Field Required: number'],
+            ])),
+        ], maxRetries: 0);
+        try {
+            $c->account->get();
+            $this->fail('expected ApiError');
+        } catch (ApiError $e) {
+            $this->assertSame(ErrorKind::BadRequest, $e->kind);
+            $this->assertSame(400, $e->statusCode);
+            $this->assertSame('400', $e->code());
+            $this->assertSame('voicetel: HTTP 400: Field Required: number', $e->getMessage());
+            $this->assertIsArray($e->body);
+            $this->assertSame('error', $e->body['status']);
+            $this->assertSame(400, $e->body['error']['code']);
         }
     }
 

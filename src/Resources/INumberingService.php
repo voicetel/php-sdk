@@ -22,19 +22,32 @@ final class INumberingService
     /**
      * GET /v2.2/inventory — search available TNs.
      *
-     * Recognised keys in $query (any combination): npa, nxx, state, ratecenter,
-     * contains, endswith, limit.
-     *
-     * @param array<string, scalar> $query
+     * @param string      $tnMask     prefix or wildcard pattern: `201`, `201555`, `201555*` (required)
+     * @param int|null    $quantity   max results, 1-1000 (server default 10)
+     * @param string|null $province   2-letter US state or Canadian province code
+     * @param string|null $rateCenter rate-center name
+     * @param string|null $lata       LATA code
      * @return array<string, mixed>
      */
-    public function searchInventory(array $query = []): array
-    {
-        $q = [];
-        foreach ($query as $k => $v) {
-            if ($v !== '' && $v !== 0 && $v !== null) {
-                $q[$k] = (string) $v;
-            }
+    public function searchInventory(
+        string $tnMask,
+        ?int $quantity = null,
+        ?string $province = null,
+        ?string $rateCenter = null,
+        ?string $lata = null,
+    ): array {
+        $q = ['tnMask' => $tnMask];
+        if ($quantity !== null) {
+            $q['quantity'] = $quantity;
+        }
+        if ($province !== null && $province !== '') {
+            $q['province'] = $province;
+        }
+        if ($rateCenter !== null && $rateCenter !== '') {
+            $q['rateCenter'] = $rateCenter;
+        }
+        if ($lata !== null) {
+            $q['lata'] = $lata;
         }
         /** @var array<string, mixed> $r */
         $r = $this->t->request('GET', '/v2.2/inventory', query: $q);
@@ -44,18 +57,37 @@ final class INumberingService
     /**
      * GET /v2.2/inventory/coverage — aggregated availability buckets.
      *
-     * Recognised keys: state, ratecenter.
-     *
-     * @param array<string, scalar> $query
+     * @param string      $countBy  aggregation dimension: "state" | "city" | "rateCenter" | "npanxx" | "block" (required)
+     * @param string|null $locState state/province code filter (e.g. NJ)
+     * @param string|null $city     city name filter
+     * @param string|null $rcAbbre  rate-center abbreviation filter
+     * @param string|null $npa      area-code filter (e.g. 201)
+     * @param string|null $lata     LATA code filter
      * @return array<string, mixed>
      */
-    public function coverage(array $query = []): array
-    {
-        $q = [];
-        foreach ($query as $k => $v) {
-            if ($v !== '' && $v !== null) {
-                $q[$k] = (string) $v;
-            }
+    public function coverage(
+        string $countBy,
+        ?string $locState = null,
+        ?string $city = null,
+        ?string $rcAbbre = null,
+        ?string $npa = null,
+        ?string $lata = null,
+    ): array {
+        $q = ['countBy' => $countBy];
+        if ($locState !== null && $locState !== '') {
+            $q['locState'] = $locState;
+        }
+        if ($city !== null && $city !== '') {
+            $q['city'] = $city;
+        }
+        if ($rcAbbre !== null && $rcAbbre !== '') {
+            $q['rcAbbre'] = $rcAbbre;
+        }
+        if ($npa !== null && $npa !== '') {
+            $q['npa'] = $npa;
+        }
+        if ($lata !== null) {
+            $q['lata'] = $lata;
         }
         /** @var array<string, mixed> $r */
         $r = $this->t->request('GET', '/v2.2/inventory/coverage', query: $q);
@@ -94,10 +126,10 @@ final class INumberingService
      *
      * @return array<string, mixed>
      */
-    public function port(int $id): array
+    public function port(string $id): array
     {
         /** @var array<string, mixed> $r */
-        $r = $this->t->request('GET', '/v2.2/ports/' . $id);
+        $r = $this->t->request('GET', '/v2.2/ports/' . rawurlencode($id));
         return $r;
     }
 

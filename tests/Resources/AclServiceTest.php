@@ -29,9 +29,11 @@ final class AclServiceTest extends TestCase
     public function testRemoveReturnsBody(): void
     {
         $c = $this->makeClient([$this->envelope(['removed' => [['cidr' => '1.2.3.0/24']]])]);
-        $r = $c->acl->remove(['acl' => [['cidr' => '1.2.3.0/24']]]);
+        $r = $c->acl->remove(['1.2.3.0/24']);
         $this->assertCount(1, $r['removed']);
         $this->assertSame('DELETE', $this->lastRequest()->getMethod());
+        $this->assertStringContainsString('cidrs=1.2.3.0%2F24', $this->lastRequest()->getUri()->getQuery());
+        $this->assertSame('', (string) $this->lastRequest()->getBody());
     }
 
     public function testConflictExposesFailedEntriesOnError(): void
