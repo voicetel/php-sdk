@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.2.21 — 2026-11-20
+
+Spec v2.2.21 audit release: the new Fax API and one breaking wire fix.
+
+### Added
+- **Fax API** (5 operations, tag `Fax`): `$client->fax`
+  - `numbers()` — `GET /v2.2/numbers/fax`: every fax-capable number on the account with the email faxes to it deliver to (`destinationId` 0 = the account email).
+  - `send($from, $to, $documents, $idempotencyKey = null)` — `POST /v2.2/faxes` (HTTP 201): **multipart/form-data** with `fromNumber`/`toNumber` text fields and 1–10 `documents` file parts (PDF/DOC/DOCX, magic-byte checked server-side, 8 MiB each and in total). Idempotent per the client-generated **UUID v4 `Idempotency-Key`** — a fresh one is generated when omitted; pass the same key with the same documents to get the original job back instead of a second send. Documents are part arrays (`name`, `contents`, optional `contentType` — guessed from the name) or bare file paths. Rate-limited to 10 sends/minute/account.
+  - `history($number, from:, to:, limit:, cursor:, status:)` — `GET /v2.2/faxes`: cursor-paged jobs newest first; `from`/`to` are unix seconds (from is the newer edge; defaults to the last 24 hours).
+  - `get($id)` — `GET /v2.2/faxes/{id}`: one job (poll until `sent`/`failed`).
+  - `document($id)` — `GET /v2.2/faxes/{id}/document`: the rendered PDF as **raw bytes** (binary response, not JSON-decoded).
+- Transport: multipart request path (Guzzle `MultipartStream`), an `idempotencyKey` override for the auto-generated `Idempotency-Key`, and a raw-bytes response mode for binary downloads.
+- The fax error envelope adds `serverTime` beside `status`/`error` — parsed tolerantly (exposed on `ApiError->body`).
+
+### Changed
+- **Breaking**: `acl->remove()` now sends the same JSON body as `acl->add()` — `["acl" => [["cidr" => "203.0.113.0/24"], ...]]` — instead of the removed `cidrs` query parameter (the server's v2.2.0 rewrite reads the body only). 409 bodies still carry `data.removed` / `data.failed` on `ApiError->body`.
+
 ## 2.2.20 — 2026-11-20
 
 Spec v2.2.20 sync. Adds the four new operations and tracks the truth fixes from spec v2.2.18–v2.2.20.

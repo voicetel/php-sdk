@@ -11,6 +11,7 @@ use VoiceTel\Sdk\Resources\AccountService;
 use VoiceTel\Sdk\Resources\AclService;
 use VoiceTel\Sdk\Resources\AuthenticationService;
 use VoiceTel\Sdk\Resources\E911Service;
+use VoiceTel\Sdk\Resources\FaxService;
 use VoiceTel\Sdk\Resources\GatewaysService;
 use VoiceTel\Sdk\Resources\INumberingService;
 use VoiceTel\Sdk\Resources\LookupsService;
@@ -21,13 +22,14 @@ use VoiceTel\Sdk\Version;
 
 final class ClientTest extends TestCase
 {
-    public function testExposesAllTenResourceServices(): void
+    public function testExposesAllElevenResourceServices(): void
     {
         $c = $this->makeClient();
         $this->assertInstanceOf(AccountService::class, $c->account);
         $this->assertInstanceOf(AclService::class, $c->acl);
         $this->assertInstanceOf(AuthenticationService::class, $c->authentication);
         $this->assertInstanceOf(E911Service::class, $c->e911);
+        $this->assertInstanceOf(FaxService::class, $c->fax);
         $this->assertInstanceOf(GatewaysService::class, $c->gateways);
         $this->assertInstanceOf(INumberingService::class, $c->iNumbering);
         $this->assertInstanceOf(LookupsService::class, $c->lookups);

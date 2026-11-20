@@ -2,7 +2,7 @@
 
 The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/api/v2.2/) — provision numbers, place orders, validate e911, send messages, and manage your account, with modern PHP 8.1+ ergonomics and battle-tested Guzzle transport.
 
-![Version](https://img.shields.io/badge/version-2.2.20-blue)
+![Version](https://img.shields.io/badge/version-2.2.21-blue)
 ![PHP](https://img.shields.io/badge/php-%E2%89%A58.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
@@ -38,10 +38,11 @@ The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/ap
 - **Structured `ApiError`** with typed `kind` so you can `match ($e->kind) { ErrorKind::RateLimit => ... }` without parsing HTTP status codes.
 - **Envelope-aware** — strips the `{"status":"success","data": ...}` wrapper before returning the inner payload.
 
-### 📞 Complete API Coverage (83 operations)
+### 📞 Complete API Coverage (88 operations)
 - **Numbers** — list, get, add, remove, route, translate, CNAM, LIDB, fax, forward, SMS, directory listing (411), messaging campaigns, port-out PIN, account moves.
 - **Account** — profile, sub-accounts, CDRs, credits, payments, MRC, registration, password recovery.
 - **e911** — record provisioning, address validation, lookup, removal.
+- **Fax** — fax-capable number listing, sending (multipart, idempotent per `Idempotency-Key` UUID), job history, single-job polling, rendered-PDF download.
 - **Gateways** — list, create, update, delete, view bound numbers.
 - **Messaging** — SMS & MMS sending, message history, 10DLC brand and campaign registration, per-number messaging state, and messaging health (account overview, per-number live check, spam-blocked samples, alert-email setting).
 - **Lookups** — CNAM, carrier & line type, LRN dips.
@@ -51,7 +52,7 @@ The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/ap
 - **Authentication** — switch between Digest, IP-only, or hybrid modes; rotate passwords.
 
 ### 🧪 Battle-Tested
-- **125 unit tests** at **94%+ line coverage** with PHPUnit 10.
+- **137 unit tests** at **94%+ line coverage** with PHPUnit 10.
 - **Mocked Guzzle** via `GuzzleHttp\Handler\MockHandler` — every method and every error path exercised, no network in CI.
 - **Read-only integration scaffolding** gated by `VOICETEL_USERNAME` / `VOICETEL_PASSWORD` env vars.
 
@@ -131,6 +132,7 @@ $key = $client->login('1000000001', 'hunter2');
 | ACL | `$client->acl` | `$client->acl->add(['acl' => [['cidr' => '1.2.3.0/24']]])` |
 | Authentication | `$client->authentication` | `$client->authentication->update(['authType' => 1])` |
 | e911 | `$client->e911` | `$client->e911->validate(['address1' => '1 Way', ...])` |
+| Fax | `$client->fax` | `$client->fax->send('2015550123', '2125550123', [['name' => 'contract.pdf', 'contents' => $pdf]])` |
 | Gateways | `$client->gateways` | `$client->gateways->list()` |
 | iNumbering | `$client->iNumbering` | `$client->iNumbering->searchInventory('201555*', quantity: 25)` |
 | Lookups | `$client->lookups` | `$client->lookups->carrier('2015550123')` |
@@ -141,6 +143,7 @@ $key = $client->login('1000000001', 'hunter2');
 ### Notes on payload shape
 
 - `messaging->send()` uses the wire field names `fromNumber` and `toNumber` — pass them exactly as shown.
+- `fax->send()` posts a **multipart/form-data** form (`fromNumber`, `toNumber`, and the `documents` file parts) with a client-generated **UUID v4 `Idempotency-Key`**; resubmitting the same documents with the same key returns the original job. `fax->document($id)` returns the rendered PDF as raw bytes.
 - `support->create()` / `support->get()` return a conversation whose `number` field is a **ticket sequence integer** (e.g. 1015), **not** a phone number — keep that distinction in mind everywhere else in this API where `number` is a 10-digit TN.
 - LIDB endpoints (`numbers->setLidb()`) use the spelling `Lidb` consistently — the legacy `Libd` typo from earlier spec drafts has been corrected.
 - `iNumbering->portAvailability()` includes the v2.2.10 fields `localRoutingNumber` and `rateCenterTier` alongside the original `number`, `portable`, `losingCarrier`, and `reason`.
@@ -198,6 +201,8 @@ These endpoints are limited to **6 requests per hour per IP**:
 - `account/api-key` (`$client->login()`)
 
 `POST /v2.2/messaging/health/check` is separately limited to **30 checks per hour per account**.
+
+`POST /v2.2/faxes` (`$client->fax->send()`) is limited to **10 sends per minute per account**.
 
 The SDK automatically retries 429 responses with `Retry-After` honored (capped at 8s), up to `maxRetries` (default 2). To bump it:
 

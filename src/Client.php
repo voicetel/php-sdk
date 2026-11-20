@@ -9,6 +9,7 @@ use VoiceTel\Sdk\Resources\AccountService;
 use VoiceTel\Sdk\Resources\AclService;
 use VoiceTel\Sdk\Resources\AuthenticationService;
 use VoiceTel\Sdk\Resources\E911Service;
+use VoiceTel\Sdk\Resources\FaxService;
 use VoiceTel\Sdk\Resources\GatewaysService;
 use VoiceTel\Sdk\Resources\INumberingService;
 use VoiceTel\Sdk\Resources\LookupsService;
@@ -34,6 +35,7 @@ final class Client
     public readonly AclService $acl;
     public readonly AuthenticationService $authentication;
     public readonly E911Service $e911;
+    public readonly FaxService $fax;
     public readonly GatewaysService $gateways;
     public readonly INumberingService $iNumbering;
     public readonly LookupsService $lookups;
@@ -72,6 +74,7 @@ final class Client
         $this->acl = new AclService($this->transport);
         $this->authentication = new AuthenticationService($this->transport);
         $this->e911 = new E911Service($this->transport);
+        $this->fax = new FaxService($this->transport);
         $this->gateways = new GatewaysService($this->transport);
         $this->iNumbering = new INumberingService($this->transport);
         $this->lookups = new LookupsService($this->transport);

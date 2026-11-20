@@ -46,21 +46,17 @@ final class AclService
     /**
      * DELETE /v2.2/acl — remove CIDR entries from the allowlist.
      *
-     * Unlike most DELETE endpoints, this one returns 200 with a body. No
-     * request body; the entries travel in the `cidrs` query parameter.
+     * Accepts the same body as {@see add()}. Since the server's v2.2.0
+     * rewrite the handler reads the JSON body only — the entries no longer
+     * travel in a `cidrs` query parameter.
      *
-     * @param array<int, string>|string $cidrs CIDR blocks to remove (e.g.
-     *        ["203.0.113.0/24", "203.0.113.1/32"]) or a comma-separated string
+     * @param array<string, mixed> $body  shape: ["acl" => [["cidr" => "1.2.3.0/24"], ...]]
      * @return array<string, mixed>
      */
-    public function remove(array|string $cidrs): array
+    public function remove(array $body): array
     {
         /** @var array<string, mixed> $r */
-        $r = $this->t->request(
-            'DELETE',
-            '/v2.2/acl',
-            query: ['cidrs' => is_array($cidrs) ? implode(',', $cidrs) : $cidrs],
-        );
+        $r = $this->t->request('DELETE', '/v2.2/acl', body: $body);
         return $r;
     }
 }

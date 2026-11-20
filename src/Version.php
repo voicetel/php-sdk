@@ -10,7 +10,7 @@ namespace VoiceTel\Sdk;
 final class Version
 {
     /** SDK release version. Bumped in lock-step with the API spec. */
-    public const SDK_VERSION = '2.2.20';
+    public const SDK_VERSION = '2.2.21';
 
     /** Default API endpoint. */
     public const DEFAULT_BASE_URL = 'https://api.voicetel.com';

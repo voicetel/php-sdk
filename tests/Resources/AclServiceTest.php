@@ -26,14 +26,43 @@ final class AclServiceTest extends TestCase
         $this->assertSame('POST', $this->lastRequest()->getMethod());
     }
 
-    public function testRemoveReturnsBody(): void
+    public function testRemoveSendsAclBody(): void
     {
         $c = $this->makeClient([$this->envelope(['removed' => [['cidr' => '1.2.3.0/24']]])]);
-        $r = $c->acl->remove(['1.2.3.0/24']);
+        $r = $c->acl->remove(['acl' => [['cidr' => '1.2.3.0/24']]]);
         $this->assertCount(1, $r['removed']);
-        $this->assertSame('DELETE', $this->lastRequest()->getMethod());
-        $this->assertStringContainsString('cidrs=1.2.3.0%2F24', $this->lastRequest()->getUri()->getQuery());
-        $this->assertSame('', (string) $this->lastRequest()->getBody());
+        $req = $this->lastRequest();
+        $this->assertSame('DELETE', $req->getMethod());
+        // The v2.2.0 handler reads the JSON body only — no cidrs query parameter.
+        $this->assertSame('', $req->getUri()->getQuery());
+        $this->assertSame('application/json', $req->getHeaderLine('Content-Type'));
+        $this->assertSame(
+            ['acl' => [['cidr' => '1.2.3.0/24']]],
+            json_decode((string) $req->getBody(), true, 512, JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function testRemoveConflictExposesRemovedAndFailedEntries(): void
+    {
+        $body = [
+            'status' => 'error',
+            'error' => ['code' => 409, 'message' => 'One or more ACL entries could not be removed'],
+            'data' => [
+                'removed' => [['cidr' => '203.0.113.0/24']],
+                'failed' => [['cidr' => '203.0.113.9/32', 'reason' => 'DB delete failed']],
+            ],
+        ];
+        $c = $this->makeClient([
+            new \GuzzleHttp\Psr7\Response(409, ['Content-Type' => 'application/json'], json_encode($body)),
+        ], maxRetries: 0);
+        try {
+            $c->acl->remove(['acl' => [['cidr' => '203.0.113.9/32']]]);
+            $this->fail('expected ApiError');
+        } catch (ApiError $e) {
+            $this->assertSame(ErrorKind::Conflict, $e->kind);
+            $this->assertIsArray($e->body);
+            $this->assertSame('DB delete failed', $e->body['data']['failed'][0]['reason']);
+        }
     }
 
     public function testConflictExposesFailedEntriesOnError(): void

@@ -9,6 +9,7 @@ use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\TransferException;
+use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Request;
 use JsonException;
 use Psr\Http\Message\ResponseInterface;
@@ -100,8 +101,17 @@ final class Transport
      * @param mixed                 $body          request body, json_encoded as-is. null = no body.
      * @param bool                  $requireAuth   prepend Authorization: Bearer
      * @param bool                  $expectNoBody  true for DELETE/204 endpoints
+     * @param string|null           $idempotencyKey override the auto-generated Idempotency-Key
+     *                                            (POST/PUT/PATCH). Fax send passes a UUID v4.
+     * @param array<int, array{name: string, contents: mixed, filename?: string, headers?: array<string, string>}>|null $multipart
+     *                                            multipart/form-data parts (Guzzle MultipartStream
+     *                                            shape). When set, the body is a multipart stream and
+     *                                            $body is ignored.
+     * @param bool                  $rawResponse   true to return the response body as a raw string
+     *                                            (binary downloads) instead of decoding the envelope
      *
-     * @return mixed decoded inner data (after envelope unwrap), or null for 204 / no-body responses
+     * @return mixed decoded inner data (after envelope unwrap), the raw body string when
+     *               $rawResponse is set, or null for 204 / no-body responses
      *
      * @throws ApiError on non-2xx or transport failure
      */
@@ -112,6 +122,9 @@ final class Transport
         mixed $body = null,
         bool $requireAuth = true,
         bool $expectNoBody = false,
+        ?string $idempotencyKey = null,
+        ?array $multipart = null,
+        bool $rawResponse = false,
     ): mixed {
         if ($requireAuth && $this->apiKey === '') {
             throw new ApiError(
@@ -131,7 +144,11 @@ final class Transport
             'Accept-Encoding' => 'gzip',
         ];
         $payload = null;
-        if ($body !== null) {
+        if ($multipart !== null) {
+            $stream = new MultipartStream($multipart);
+            $payload = $stream;
+            $headers['Content-Type'] = 'multipart/form-data; boundary=' . $stream->getBoundary();
+        } elseif ($body !== null) {
             try {
                 $payload = json_encode($body, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             } catch (JsonException $e) {
@@ -143,7 +160,7 @@ final class Transport
             $headers['Authorization'] = 'Bearer ' . $this->apiKey;
         }
         if (in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
-            $headers['Idempotency-Key'] = bin2hex(random_bytes(16));
+            $headers['Idempotency-Key'] = $idempotencyKey ?? bin2hex(random_bytes(16));
         }
 
         $request = new Request($method, $url, $headers, $payload);
@@ -175,7 +192,7 @@ final class Transport
                 continue;
             }
 
-            return $this->decode($response, $expectNoBody);
+            return $this->decode($response, $expectNoBody, $rawResponse);
         }
 
         // Defensive — loop always returns or throws.
@@ -186,9 +203,10 @@ final class Transport
     }
 
     /**
-     * @return mixed decoded inner data, or null for empty / no-body responses
+     * @return mixed decoded inner data, the raw body string for binary
+     *               responses, or null for empty / no-body responses
      */
-    private function decode(ResponseInterface $resp, bool $expectNoBody): mixed
+    private function decode(ResponseInterface $resp, bool $expectNoBody, bool $rawResponse = false): mixed
     {
         $status = $resp->getStatusCode();
         $raw = (string) $resp->getBody();
@@ -202,6 +220,9 @@ final class Transport
         }
 
         if ($status >= 200 && $status < 300) {
+            if ($rawResponse) {
+                return $raw;
+            }
             if ($expectNoBody || $raw === '' || $status === 204) {
                 return null;
             }
