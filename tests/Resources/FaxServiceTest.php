@@ -135,6 +135,30 @@ final class FaxServiceTest extends TestCase
         }
     }
 
+    public function testSendMapsInsufficientBalanceAndPayloadTooLarge(): void
+    {
+        $cases = [
+            [402, ErrorKind::InsufficientBalance, 'Insufficient balance to send fax.'],
+            [413, ErrorKind::PayloadTooLarge, 'Document exceeds the 8 MiB limit.'],
+        ];
+        foreach ($cases as [$status, $kind, $message]) {
+            $c = $this->makeClient([
+                new Response($status, ['Content-Type' => 'application/json'], json_encode([
+                    'status' => 'error',
+                    'error' => ['code' => $status, 'message' => $message],
+                ], JSON_THROW_ON_ERROR)),
+            ]);
+            try {
+                $c->fax->send('2015550123', '2125550123', [['name' => 'c.pdf', 'contents' => 'pdf']]);
+                $this->fail("expected ApiError for HTTP {$status}");
+            } catch (ApiError $e) {
+                $this->assertSame($kind, $e->kind, "HTTP {$status}");
+                $this->assertSame($status, $e->statusCode);
+                $this->assertStringContainsString($message, $e->getMessage());
+            }
+        }
+    }
+
     public function testHistorySendsExactQueryNames(): void
     {
         $c = $this->makeClient([$this->envelope([

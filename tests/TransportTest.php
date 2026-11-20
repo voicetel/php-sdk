@@ -96,9 +96,11 @@ final class TransportTest extends TestCase
         $mapping = [
             400 => ErrorKind::BadRequest,
             401 => ErrorKind::Authentication,
+            402 => ErrorKind::InsufficientBalance,
             403 => ErrorKind::PermissionDenied,
             404 => ErrorKind::NotFound,
             409 => ErrorKind::Conflict,
+            413 => ErrorKind::PayloadTooLarge,
             500 => ErrorKind::Server,
             418 => ErrorKind::Unknown,
         ];

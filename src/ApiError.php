@@ -76,4 +76,16 @@ final class ApiError extends RuntimeException
     {
         return $this->kind === ErrorKind::Conflict;
     }
+
+    /** True when this error has kind = InsufficientBalance. */
+    public function isInsufficientBalance(): bool
+    {
+        return $this->kind === ErrorKind::InsufficientBalance;
+    }
+
+    /** True when this error has kind = PayloadTooLarge. */
+    public function isPayloadTooLarge(): bool
+    {
+        return $this->kind === ErrorKind::PayloadTooLarge;
+    }
 }

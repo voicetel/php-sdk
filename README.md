@@ -26,7 +26,7 @@ The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/ap
 
 ### 🛡️ Modern PHP, Strictly Typed
 - **PHP 8.1+** end-to-end — readonly properties, native enums, named arguments, typed everywhere.
-- **`ErrorKind` enum** for HTTP error classification: `BadRequest`, `Authentication`, `PermissionDenied`, `NotFound`, `Conflict`, `RateLimit`, `Server`, `Unknown`.
+- **`ErrorKind` enum** for HTTP error classification: `BadRequest`, `Authentication`, `InsufficientBalance`, `PermissionDenied`, `NotFound`, `Conflict`, `PayloadTooLarge`, `RateLimit`, `Server`, `Unknown`.
 - **PSR-4 autoloading** under `VoiceTel\Sdk\`, plays nicely with Symfony, Laravel, and every other Composer-aware framework.
 - **PHPStan level 8 clean** across the entire `src/` tree.
 
@@ -157,9 +157,11 @@ All HTTP errors throw `VoiceTel\Sdk\ApiError`. Inspect `kind`, `statusCode`, `co
 |---|---|
 | `ErrorKind::BadRequest` | 400 |
 | `ErrorKind::Authentication` | 401 |
+| `ErrorKind::InsufficientBalance` | 402 |
 | `ErrorKind::PermissionDenied` | 403 |
 | `ErrorKind::NotFound` | 404 |
 | `ErrorKind::Conflict` | 409 |
+| `ErrorKind::PayloadTooLarge` | 413 |
 | `ErrorKind::RateLimit` | 429 |
 | `ErrorKind::Server` | 5xx |
 | `ErrorKind::Unknown` | other / transport |

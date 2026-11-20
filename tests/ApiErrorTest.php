@@ -26,6 +26,8 @@ final class ApiErrorTest extends TestCase
         $this->assertTrue((new ApiError(ErrorKind::Conflict))->isConflict());
         $this->assertTrue((new ApiError(ErrorKind::Authentication))->isAuthentication());
         $this->assertTrue((new ApiError(ErrorKind::RateLimit))->isRateLimit());
+        $this->assertTrue((new ApiError(ErrorKind::InsufficientBalance))->isInsufficientBalance());
+        $this->assertTrue((new ApiError(ErrorKind::PayloadTooLarge))->isPayloadTooLarge());
         $this->assertFalse((new ApiError(ErrorKind::Server))->isRateLimit());
     }
 
@@ -33,9 +35,11 @@ final class ApiErrorTest extends TestCase
     {
         $this->assertSame(ErrorKind::BadRequest, ErrorKind::fromStatus(400));
         $this->assertSame(ErrorKind::Authentication, ErrorKind::fromStatus(401));
+        $this->assertSame(ErrorKind::InsufficientBalance, ErrorKind::fromStatus(402));
         $this->assertSame(ErrorKind::PermissionDenied, ErrorKind::fromStatus(403));
         $this->assertSame(ErrorKind::NotFound, ErrorKind::fromStatus(404));
         $this->assertSame(ErrorKind::Conflict, ErrorKind::fromStatus(409));
+        $this->assertSame(ErrorKind::PayloadTooLarge, ErrorKind::fromStatus(413));
         $this->assertSame(ErrorKind::RateLimit, ErrorKind::fromStatus(429));
         $this->assertSame(ErrorKind::Server, ErrorKind::fromStatus(503));
         $this->assertSame(ErrorKind::Unknown, ErrorKind::fromStatus(418));
