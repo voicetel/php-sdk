@@ -297,4 +297,95 @@ final class NumbersServiceTest extends TestCase
         $this->assertSame('9999', $r['portOutPin']);
         $this->assertFalse($r['changed']);
     }
+
+    public function testGetDirectoryListing(): void
+    {
+        $c = $this->makeClient([$this->envelope([
+            'number' => self::TN,
+            'status' => 'listed',
+            'eligible' => true,
+            'listing' => [
+                'type' => 'B',
+                'name' => 'Acme Corp',
+                'streetNumber' => '100',
+                'streetName' => 'Broadway',
+                'streetType' => 'St',
+                'streetSuffix' => '',
+                'location' => 'Suite 900',
+                'city' => 'New York',
+                'state' => 'NY',
+                'zip' => '10005',
+                'complex' => false,
+            ],
+            'pending' => null,
+        ])]);
+        $r = $c->numbers->getDirectoryListing(self::TN);
+        $this->assertSame('listed', $r['status']);
+        $this->assertTrue($r['eligible']);
+        $this->assertSame('B', $r['listing']['type']);
+        $this->assertSame('Acme Corp', $r['listing']['name']);
+        $this->assertFalse($r['listing']['complex']);
+        $this->assertNull($r['pending']);
+        $req = $this->lastRequest();
+        $this->assertSame('GET', $req->getMethod());
+        $this->assertSame('/v2.2/numbers/' . self::TN . '/directory-listing', $req->getUri()->getPath());
+    }
+
+    public function testSetDirectoryListingReturns202Pending(): void
+    {
+        $c = $this->makeClient([$this->envelope([
+            'number' => self::TN,
+            'status' => 'pending',
+            'orderId' => '1026472',
+            'listing' => [
+                'type' => 'B',
+                'name' => 'Acme Corp',
+                'city' => 'New York',
+                'state' => 'NY',
+                'zip' => '10005',
+            ],
+        ], 202)]);
+        $r = $c->numbers->setDirectoryListing(self::TN, [
+            'type' => 'business',
+            'name' => 'Acme Corp',
+            'city' => 'New York',
+            'state' => 'NY',
+            'zip' => '10005',
+        ]);
+        $this->assertSame('pending', $r['status']);
+        $this->assertSame('1026472', $r['orderId']);
+        $this->assertSame('Acme Corp', $r['listing']['name']);
+        $req = $this->lastRequest();
+        $this->assertSame('PUT', $req->getMethod());
+        $this->assertSame('/v2.2/numbers/' . self::TN . '/directory-listing', $req->getUri()->getPath());
+        $sent = json_decode((string) $req->getBody(), true);
+        $this->assertSame('business', $sent['type']);
+        $this->assertSame('10005', $sent['zip']);
+    }
+
+    public function testRemoveDirectoryListingReturns202Removing(): void
+    {
+        $c = $this->makeClient([$this->envelope([
+            'number' => self::TN,
+            'status' => 'removing',
+            'orderId' => '1026473',
+        ], 202)]);
+        $r = $c->numbers->removeDirectoryListing(self::TN);
+        $this->assertSame('removing', $r['status']);
+        $this->assertSame('1026473', $r['orderId']);
+        $req = $this->lastRequest();
+        $this->assertSame('DELETE', $req->getMethod());
+        $this->assertSame('/v2.2/numbers/' . self::TN . '/directory-listing', $req->getUri()->getPath());
+    }
+
+    public function testRemoveDirectoryListingCancellingPendingAddHasNoOrderId(): void
+    {
+        $c = $this->makeClient([$this->envelope([
+            'number' => self::TN,
+            'status' => 'not_listed',
+        ], 202)]);
+        $r = $c->numbers->removeDirectoryListing(self::TN);
+        $this->assertSame('not_listed', $r['status']);
+        $this->assertArrayNotHasKey('orderId', $r);
+    }
 }

@@ -7,8 +7,8 @@ namespace VoiceTel\Sdk\Resources;
 use VoiceTel\Sdk\Transport;
 
 /**
- * LookupsService provides CNAM and LRN dips. Each call costs money; rate
- * them per call rather than fanning out blindly.
+ * LookupsService provides CNAM, carrier & line-type, and LRN dips. Each call
+ * costs money; rate them per call rather than fanning out blindly.
  */
 final class LookupsService
 {
@@ -25,6 +25,30 @@ final class LookupsService
     {
         /** @var array<string, mixed> $r */
         $r = $this->t->request('GET', '/v2.2/cnam/' . rawurlencode($number));
+        return $r;
+    }
+
+    /**
+     * GET /v2.2/carrier/{number} — carrier and line-type lookup on a 10-digit TN.
+     *
+     * Billed per lookup at the account's CNAM rate.
+     *
+     * Response data shape — `carrier` uses the upstream carrier lookup's
+     * field names (snake_case):
+     *  - number (string)
+     *  - carrier (array) —
+     *    - name (string|null) — carrier or network name
+     *    - type (string|null) — line type: voip, landline, mobile, ...
+     *    - mobile_country_code (string|null) — present on mobile numbers
+     *    - mobile_network_code (string|null) — present on mobile numbers
+     *    - error_code (int|null) — when the details could not be determined
+     *
+     * @return array<string, mixed>
+     */
+    public function carrier(string $number): array
+    {
+        /** @var array<string, mixed> $r */
+        $r = $this->t->request('GET', '/v2.2/carrier/' . rawurlencode($number));
         return $r;
     }
 

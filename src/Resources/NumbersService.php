@@ -11,8 +11,10 @@ use VoiceTel\Sdk\Transport;
  * owned by the account.
  *
  * DELETE endpoints generally return 204 No Content; the methods here return
- * `void`. The two exceptions:
+ * `void`. The exceptions:
  *  - {@see unassignCampaign()} and {@see bulkUnassignCampaign()} return 200 with a body.
+ *  - {@see removeDirectoryListing()} returns 202 with a body (applied in
+ *    the background).
  */
 final class NumbersService
 {
@@ -35,9 +37,10 @@ final class NumbersService
     /**
      * POST /v2.2/numbers — attach a TN to the account.
      *
-     * Required body: number. Optional: route — global route type: 1 USER,
-     * 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML, 8 SDN,
-     * 9 MOBILE.
+     * Required body: number. Optional: route — a gateway id on this account
+     * (GET /v2.2/gateways) or a global route: 1 USER, 2 T30, 3 VOICE_BRIDGE,
+     * 4 DID (default), 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE. The API returns
+     * 400 for an unknown route.
      *
      * @param array<string, mixed> $body
      * @return array<string, mixed>
@@ -70,9 +73,9 @@ final class NumbersService
     /**
      * PATCH /v2.2/numbers/{number} — transfer a TN to another account in the org.
      *
-     * Required body: accountId, route — route is the global route type on the
-     * destination account: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default),
-     * 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE.
+     * Required body: accountId, route — route is a gateway id on the
+     * destination account or a global route: 1 USER, 2 T30, 3 VOICE_BRIDGE,
+     * 4 DID (default), 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE.
      *
      * @param array<string, mixed> $body
      * @return array<string, mixed>
@@ -93,9 +96,9 @@ final class NumbersService
     /**
      * PUT /v2.2/numbers/{number}/route — update outbound route.
      *
-     * @param array<string, mixed> $body  required: route (int) — global route
-     *   type: 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
-     *   8 SDN, 9 MOBILE
+     * @param array<string, mixed> $body  required: route (int) — a gateway
+     *   id on this account or a global route: 1 USER, 2 T30, 3 VOICE_BRIDGE,
+     *   4 DID (default), 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE
      * @return array<string, mixed>
      */
     public function setRoute(string $number, array $body): array
@@ -380,6 +383,81 @@ final class NumbersService
             '/v2.2/numbers/' . rawurlencode($number) . '/port-out-pin',
             body: $body,
         );
+        return $r;
+    }
+
+    /**
+     * GET /v2.2/numbers/{number}/directory-listing — the 411 listing state as published.
+     *
+     * Response data shape:
+     *  - number (string)
+     *  - status ("listed"|"not_listed"|"pending"|"removing"|"unavailable") —
+     *    listed: published; not_listed: none; pending: an add or change is
+     *    being applied; removing: a removal is being applied; unavailable:
+     *    the number cannot be listed
+     *  - eligible (bool) — whether a listing can be added to this number
+     *  - listing (array|null) — the published listing; null when none
+     *  - pending (array|null) — a submitted listing not yet published
+     *
+     * A listing (type B business / R residence; address fields may be empty
+     * strings): {type, name|firstName+lastName, streetNumber, streetName,
+     * streetType, streetSuffix, location, city, state, zip, complex} —
+     * complex is read-only (a multi-line listing).
+     *
+     * @return array<string, mixed>
+     */
+    public function getDirectoryListing(string $number): array
+    {
+        /** @var array<string, mixed> $r */
+        $r = $this->t->request('GET', '/v2.2/numbers/' . rawurlencode($number) . '/directory-listing');
+        return $r;
+    }
+
+    /**
+     * PUT /v2.2/numbers/{number}/directory-listing — add or replace the 411 listing.
+     *
+     * Accepted at once and applied in the background (HTTP 202). Required
+     * body keys: type ("business"|"residence"; B/R shorthand also accepted),
+     * city, state (2-letter US state/territory), zip (5 digits; ZIP+4
+     * accepted, stored as 5). type business also requires name (<=60);
+     * residence requires firstName and lastName (<=30 each). Optional:
+     * streetNumber + streetName (pair them or neither), streetType,
+     * streetSuffix ("" N S E W NE NW SE SW; requires streetName), location
+     * (requires streetName). Letters, numbers, spaces and & ' . , # / - are
+     * allowed in the text fields.
+     *
+     * 202 data: {number, status: "pending", orderId (string|null), listing}
+     * — listing echoes the submitted listing (without `complex`).
+     *
+     * @param array<string, mixed> $body
+     * @return array<string, mixed>
+     */
+    public function setDirectoryListing(string $number, array $body): array
+    {
+        /** @var array<string, mixed> $r */
+        $r = $this->t->request(
+            'PUT',
+            '/v2.2/numbers/' . rawurlencode($number) . '/directory-listing',
+            body: $body,
+        );
+        return $r;
+    }
+
+    /**
+     * DELETE /v2.2/numbers/{number}/directory-listing — remove the published listing,
+     * or cancel a pending add.
+     *
+     * Accepted at once and applied in the background (HTTP 202).
+     * 202 data: {number, status: "removing", orderId} when removing a
+     * published listing; {number, status: "not_listed"} (orderId absent)
+     * when a pending add was cancelled.
+     *
+     * @return array<string, mixed>
+     */
+    public function removeDirectoryListing(string $number): array
+    {
+        /** @var array<string, mixed> $r */
+        $r = $this->t->request('DELETE', '/v2.2/numbers/' . rawurlencode($number) . '/directory-listing');
         return $r;
     }
 }

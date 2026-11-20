@@ -20,6 +20,13 @@ final class MessagingService
     /**
      * GET /v2.2/messages — message history for one number.
      *
+     * Each record's `value` carries, as nullable optional fields:
+     * sourceNumber, destinationNumber, direction, rate, number, message
+     * (sms/mms), messageText and transactionGUID (dlr receipts;
+     * concatenatedMessage on some multi-part receipts), attachments (mms
+     * inbound — one object per media file), subject (mms), and ip (outbound
+     * sms — the address the send request came from).
+     *
      * @param string      $number 10-digit TN whose messages are returned (required)
      * @param int|null    $from   unix timestamp range start
      * @param int|null    $to     unix timestamp range end
@@ -46,8 +53,10 @@ final class MessagingService
     /**
      * POST /v2.2/messages — send an SMS or MMS.
      *
-     * Required body keys: fromNumber, toNumber, text. Optional: subject, mediaUrls
-     * (presence of mediaUrls switches the message to MMS).
+     * Required body keys: fromNumber, toNumber. Optional: text (omittable
+     * for a media-only MMS; max 2048 chars for MMS), subject (**deprecated**
+     * — still accepted), mediaUrls (non-empty array of http(s) URLs; its
+     * presence switches the message to MMS).
      *
      * @param array<string, mixed> $body
      * @return array<string, mixed>

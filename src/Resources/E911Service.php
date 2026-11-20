@@ -48,6 +48,8 @@ final class E911Service
     /**
      * POST /v2.2/e911/validations — validate an address, returning an addressid.
      *
+     * The response's address.addressid is a hex **string**.
+     *
      * @param array<string, mixed> $body  required: address1, city, state, zip; optional: address2
      * @return array<string, mixed>
      */
@@ -73,7 +75,7 @@ final class E911Service
     /**
      * PUT /v2.2/e911/{dn} — provision e911 for $dn using a previously-validated addressid.
      *
-     * @param array<string, mixed> $body  required: callername, addressid
+     * @param array<string, mixed> $body  required: callername, addressid (hex string)
      * @return array<string, mixed>
      */
     public function provision(string $dn, array $body): array

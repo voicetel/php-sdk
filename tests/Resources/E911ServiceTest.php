@@ -30,9 +30,9 @@ final class E911ServiceTest extends TestCase
 
     public function testValidate(): void
     {
-        $c = $this->makeClient([$this->envelope(['address' => ['addressid' => 42]])]);
+        $c = $this->makeClient([$this->envelope(['address' => ['addressid' => '123a45b678c9d012e3f45a67b890c123']])]);
         $r = $c->e911->validate(['address1' => '1 Way', 'city' => 'Newark', 'state' => 'NJ', 'zip' => '07101']);
-        $this->assertSame(42, $r['address']['addressid']);
+        $this->assertSame('123a45b678c9d012e3f45a67b890c123', $r['address']['addressid']);
         $this->assertSame('/v2.2/e911/validations', $this->lastRequest()->getUri()->getPath());
     }
 
@@ -47,8 +47,10 @@ final class E911ServiceTest extends TestCase
     public function testProvision(): void
     {
         $c = $this->makeClient([$this->envelope(['record' => ['dn' => '12015550123']])]);
-        $c->e911->provision('2015550123', ['callername' => 'Jane', 'addressid' => 42]);
+        $c->e911->provision('2015550123', ['callername' => 'Jane', 'addressid' => '123a45b678c9d012e3f45a67b890c123']);
         $this->assertSame('PUT', $this->lastRequest()->getMethod());
+        $sent = json_decode((string) $this->lastRequest()->getBody(), true);
+        $this->assertSame('123a45b678c9d012e3f45a67b890c123', $sent['addressid']);
     }
 
     public function testRemoveReturnsVoid(): void

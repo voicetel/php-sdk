@@ -38,6 +38,24 @@ final class INumberingServiceTest extends TestCase
         $this->assertSame('ord_1', $r['orderId']);
     }
 
+    public function testOrderReturnsRoutes(): void
+    {
+        $c = $this->makeClient([$this->envelope([
+            'orderId' => 'ord_2',
+            'amountCharged' => 2.0,
+            'numbersOrdered' => ['2015550100', '2015550123'],
+            'failed' => [],
+            'routes' => [
+                ['number' => '2015550100', 'route' => 4],
+                ['number' => '2015550123', 'route' => 7],
+            ],
+        ])]);
+        $r = $c->iNumbering->order(['numbers' => [['number' => '2015550100'], ['number' => '2015550123', 'route' => 7]]]);
+        $this->assertSame('2015550100', $r['routes'][0]['number']);
+        $this->assertSame(4, $r['routes'][0]['route']);
+        $this->assertSame(7, $r['routes'][1]['route']);
+    }
+
     public function testPorts(): void
     {
         $c = $this->makeClient([$this->envelope(['ports' => []])]);

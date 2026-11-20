@@ -98,8 +98,12 @@ final class INumberingService
      * POST /v2.2/orders — purchase one or more TNs.
      *
      * `numbers` may contain plain string TNs or {"number", "route"} objects,
-     * where route is the global route type: 1 USER, 2 T30, 3 VOICE_BRIDGE,
-     * 4 DID (default), 5 T38, 6 VOICEML, 8 SDN, 9 MOBILE.
+     * where route is a gateway id on this account or a global route:
+     * 1 USER, 2 T30, 3 VOICE_BRIDGE, 4 DID (default), 5 T38, 6 VOICEML,
+     * 8 SDN, 9 MOBILE. The API returns 400 for an unknown route.
+     *
+     * The 201 response includes `routes` — one {number, route} row per
+     * ordered number, reporting the route each was placed on.
      *
      * @param array<string, mixed> $body
      * @return array<string, mixed>

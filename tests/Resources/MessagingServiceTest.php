@@ -32,6 +32,48 @@ final class MessagingServiceTest extends TestCase
         $this->assertArrayNotHasKey('from_number', $sent);
     }
 
+    public function testSendMediaOnlyMmsOmitsText(): void
+    {
+        $c = $this->makeClient([$this->envelope(['id' => 'msg_2', 'type' => 'mms', 'fromNumber' => '1', 'toNumber' => '2', 'parts' => 1])]);
+        $c->messaging->send([
+            'fromNumber' => '2015550123',
+            'toNumber' => '2125559999',
+            'mediaUrls' => ['https://cdn.example.test/logo.png'],
+        ]);
+        $sent = json_decode((string) $this->lastRequest()->getBody(), true);
+        $this->assertArrayNotHasKey('text', $sent);
+        $this->assertSame(['https://cdn.example.test/logo.png'], $sent['mediaUrls']);
+    }
+
+    public function testHistoryRecordsCarryV2220Fields(): void
+    {
+        $c = $this->makeClient([$this->envelope([
+            'messages' => [[
+                'id' => 'r1',
+                'value' => [
+                    'sourceNumber' => '2015550100',
+                    'number' => '2015550123',
+                    'messageText' => 'DELIV',
+                    'transactionGUID' => 'msg_1',
+                    'concatenatedMessage' => null,
+                    'attachments' => null,
+                    'subject' => null,
+                    'ip' => '203.0.113.7',
+                ],
+            ]],
+            'number' => '2015550123',
+            'type' => 'dlr',
+        ])]);
+        $r = $c->messaging->history('2015550123');
+        $v = $r['messages'][0]['value'];
+        $this->assertSame('DELIV', $v['messageText']);
+        $this->assertSame('msg_1', $v['transactionGUID']);
+        $this->assertNull($v['concatenatedMessage']);
+        $this->assertNull($v['attachments']);
+        $this->assertNull($v['subject']);
+        $this->assertSame('203.0.113.7', $v['ip']);
+    }
+
     public function testCreateBrand(): void
     {
         $c = $this->makeClient([$this->envelope(['result' => ['statusCode' => '200', 'status' => 'Success']])]);

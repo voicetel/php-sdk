@@ -2,7 +2,7 @@
 
 The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/api/v2.2/) — provision numbers, place orders, validate e911, send messages, and manage your account, with modern PHP 8.1+ ergonomics and battle-tested Guzzle transport.
 
-![Version](https://img.shields.io/badge/version-2.2.17-blue)
+![Version](https://img.shields.io/badge/version-2.2.20-blue)
 ![PHP](https://img.shields.io/badge/php-%E2%89%A58.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
@@ -38,20 +38,20 @@ The official PHP client for the [VoiceTel REST API](https://voicetel.com/docs/ap
 - **Structured `ApiError`** with typed `kind` so you can `match ($e->kind) { ErrorKind::RateLimit => ... }` without parsing HTTP status codes.
 - **Envelope-aware** — strips the `{"status":"success","data": ...}` wrapper before returning the inner payload.
 
-### 📞 Complete API Coverage (79 operations)
-- **Numbers** — list, get, add, remove, route, translate, CNAM, LIDB, fax, forward, SMS, messaging campaigns, port-out PIN, account moves.
+### 📞 Complete API Coverage (83 operations)
+- **Numbers** — list, get, add, remove, route, translate, CNAM, LIDB, fax, forward, SMS, directory listing (411), messaging campaigns, port-out PIN, account moves.
 - **Account** — profile, sub-accounts, CDRs, credits, payments, MRC, registration, password recovery.
 - **e911** — record provisioning, address validation, lookup, removal.
 - **Gateways** — list, create, update, delete, view bound numbers.
 - **Messaging** — SMS & MMS sending, message history, 10DLC brand and campaign registration, per-number messaging state, and messaging health (account overview, per-number live check, spam-blocked samples, alert-email setting).
-- **Lookups** — CNAM and LRN dips.
+- **Lookups** — CNAM, carrier & line type, LRN dips.
 - **iNumbering** — inventory search, coverage queries, number orders, port-in submissions, port-out availability checks.
 - **Support** — ticket create / read / update / delete, threaded messages, replies.
 - **ACL** — IP allowlist management with structured 409 conflict bodies.
 - **Authentication** — switch between Digest, IP-only, or hybrid modes; rotate passwords.
 
 ### 🧪 Battle-Tested
-- **114 unit tests** at **94%+ line coverage** with PHPUnit 10.
+- **125 unit tests** at **94%+ line coverage** with PHPUnit 10.
 - **Mocked Guzzle** via `GuzzleHttp\Handler\MockHandler` — every method and every error path exercised, no network in CI.
 - **Read-only integration scaffolding** gated by `VOICETEL_USERNAME` / `VOICETEL_PASSWORD` env vars.
 
@@ -133,7 +133,7 @@ $key = $client->login('1000000001', 'hunter2');
 | e911 | `$client->e911` | `$client->e911->validate(['address1' => '1 Way', ...])` |
 | Gateways | `$client->gateways` | `$client->gateways->list()` |
 | iNumbering | `$client->iNumbering` | `$client->iNumbering->searchInventory('201555*', quantity: 25)` |
-| Lookups | `$client->lookups` | `$client->lookups->lrn('2015550123', '2125550000')` |
+| Lookups | `$client->lookups` | `$client->lookups->carrier('2015550123')` |
 | Messaging | `$client->messaging` | `$client->messaging->send(['fromNumber' => ..., 'toNumber' => ..., 'text' => ...])` |
 | Numbers | `$client->numbers` | `$client->numbers->assignCampaign('2015550123', ['campaignId' => 'CXXXXXX'])` |
 | Support | `$client->support` | `$client->support->create(['subject' => '...', 'message' => '...'])` |
@@ -144,7 +144,7 @@ $key = $client->login('1000000001', 'hunter2');
 - `support->create()` / `support->get()` return a conversation whose `number` field is a **ticket sequence integer** (e.g. 1015), **not** a phone number — keep that distinction in mind everywhere else in this API where `number` is a 10-digit TN.
 - LIDB endpoints (`numbers->setLidb()`) use the spelling `Lidb` consistently — the legacy `Libd` typo from earlier spec drafts has been corrected.
 - `iNumbering->portAvailability()` includes the v2.2.10 fields `localRoutingNumber` and `rateCenterTier` alongside the original `number`, `portable`, `losingCarrier`, and `reason`.
-- `DELETE` endpoints generally return `204 No Content` — the corresponding methods return `void`. Three endpoints intentionally return a body and an `array`: `acl->remove()`, `numbers->unassignCampaign()`, and `numbers->bulkUnassignCampaign()`.
+- `DELETE` endpoints generally return `204 No Content` — the corresponding methods return `void`. The exceptions return a body and an `array`: `acl->remove()`, `numbers->unassignCampaign()`, and `numbers->bulkUnassignCampaign()` (200), and `numbers->removeDirectoryListing()` (202 — the removal is applied in the background).
 
 ## 🚨 Error Handling
 
