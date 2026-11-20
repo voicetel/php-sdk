@@ -1,15 +1,11 @@
 # Changelog
 
-## Unreleased
-
-### Added
-- `ErrorKind::InsufficientBalance` (HTTP 402 — fax send, directory listing) and `ErrorKind::PayloadTooLarge` (HTTP 413 — fax documents over 8 MiB), with matching `ApiError::isInsufficientBalance()` / `isPayloadTooLarge()` predicates. Both previously fell through to `Unknown`.
-
 ## 2.2.21 — 2026-11-20
 
 Spec v2.2.21 audit release: the new Fax API and one breaking wire fix.
 
 ### Added
+- `ErrorKind::InsufficientBalance` (HTTP 402 — fax send, directory listing) and `ErrorKind::PayloadTooLarge` (HTTP 413 — fax documents over 8 MiB), with matching `ApiError::isInsufficientBalance()` / `isPayloadTooLarge()` predicates. Both previously fell through to `Unknown`.
 - **Fax API** (5 operations, tag `Fax`): `$client->fax`
   - `numbers()` — `GET /v2.2/numbers/fax`: every fax-capable number on the account with the email faxes to it deliver to (`destinationId` 0 = the account email).
   - `send($from, $to, $documents, $idempotencyKey = null)` — `POST /v2.2/faxes` (HTTP 201): **multipart/form-data** with `fromNumber`/`toNumber` text fields and 1–10 `documents` file parts (PDF/DOC/DOCX, magic-byte checked server-side, 8 MiB each and in total). Idempotent per the client-generated **UUID v4 `Idempotency-Key`** — a fresh one is generated when omitted; pass the same key with the same documents to get the original job back instead of a second send. Documents are part arrays (`name`, `contents`, optional `contentType` — guessed from the name) or bare file paths. Rate-limited to 10 sends/minute/account.
